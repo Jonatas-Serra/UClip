@@ -5,35 +5,88 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build-and-release:
+    name: Build and Release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node
+
+      # Setup Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-      - name: Install frontend deps
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      # Setup Python (para backend, se necessário)
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      # Install dependencies for building
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxss1 libgconf-2-4
+
+      # Install frontend dependencies
+      - name: Install frontend dependencies
         run: |
           cd frontend
           npm ci
+
+      # Build frontend with Vite
       - name: Build frontend
         run: |
           cd frontend
           npm run build
-      - name: Build packages
+
+      # Prepare app directory for electron-builder
+      - name: Prepare app for packaging
         run: |
           cd frontend
-          npx electron-builder --linux
-      - name: Create GitHub release
+          npm run prepack
+
+      # Build AppImage and DEB using electron-builder
+      - name: Build AppImage and DEB
+        run: |
+          cd frontend
+          npx electron-builder --linux --publish never
+        env:
+          # Desabilita análise automática de dependências nativas
+          SKIP_NOTARIZATION: true
+
+      # Extract version from tag
+      - name: Extract version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      # Create GitHub Release with assets
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref }}
+          tag_name: ${{ steps.version.outputs.VERSION }}
+          name: Release ${{ steps.version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+          files: |
+            frontend/dist/UClip-*.AppImage
+            frontend/dist/UClip-*.deb
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Upload artifacts
+
+      # Upload artifacts for inspection
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: release-artifacts
-          path: frontend/dist
+          name: release-artifacts-${{ steps.version.outputs.VERSION }}
+          path: |
+            frontend/dist/*.AppImage
+            frontend/dist/*.deb
+          retention-days: 30
