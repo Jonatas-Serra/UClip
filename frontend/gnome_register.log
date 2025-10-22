@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "<stdin>", line 2, in <module>
+IndexError: list index out of range
+scripts/register_gnome_shortcut.sh: linha 55: ['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/']: Arquivo ou diretório inexistente

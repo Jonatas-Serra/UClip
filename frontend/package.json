@@ -1,0 +1,42 @@
+{
+  "name": "uclip-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "main": "electron/main.js",
+  "description": "UClip - Ubuntu clipboard manager (frontend)",
+  "author": "Jonatas Serra <jonatasserra@outlook.com>",
+  "homepage": "https://github.com/jonatasserra/UClip",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "prepack": "npm run build && rm -rf app && mkdir -p app && cp -r dist app/dist",
+    "preview": "vite preview",
+    "dev:electron": "cross-env UCLIP_DEV=1 electron ../electron/main.js"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-i18next": "^12.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "vite": "^5.0.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@vitejs/plugin-react": "^4.0.0",
+    "electron": "^27.0.0",
+    "electron-builder": "^26.0.0",
+    "cross-env": "^7.0.3"
+  },
+  "build": {
+    "appId": "com.uclip.app",
+    "productName": "UClip",
+  "files": ["app/**/*", "electron/**/*", "package.json"],
+    "directories": {
+      "buildResources": "buildResources"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"]
+    }
+  }
+}

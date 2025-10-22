@@ -1,0 +1,61 @@
+{
+  "common": {
+    "search": "Search",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "delete": "Delete",
+    "clear_all": "Clear All",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "ok": "OK"
+  },
+  "app": {
+    "title": "UClip - Clipboard Manager",
+    "subtitle": "Your clip history always at hand",
+    "empty_state": "No clips in history",
+    "empty_description": "Copy something to get started!",
+    "loading_clips": "Loading clips...",
+    "error_loading": "Error loading clips: {{error}}",
+    "search_placeholder": "Search clips...",
+    "copy_success": "Clip copied to clipboard!",
+    "last_updated": "Last updated: {{time}}"
+  },
+  "clipboard": {
+    "text": "Text",
+    "image": "Image",
+    "unknown": "Unknown",
+    "preview": "Preview",
+    "no_content": "No content to display"
+  },
+  "menu": {
+    "settings": "Settings",
+    "about": "About",
+    "quit": "Quit",
+    "help": "Help"
+  },
+  "settings": {
+    "language": "Language",
+    "theme": "Theme",
+    "auto_copy": "Auto-copy when selecting",
+    "minimize_on_copy": "Minimize on copy",
+    "startup": "Start with system",
+    "keyboard_shortcuts": "Keyboard Shortcuts"
+  },
+  "about": {
+    "title": "About UClip",
+    "version": "Version {{version}}",
+    "description": "A modern clipboard manager for Linux",
+    "author": "Jonatas Serra",
+    "license": "MIT License",
+    "repository": "GitHub Repository"
+  },
+  "keyboard_shortcuts": {
+    "up_down": "↑↓ Navigate",
+    "enter": "Enter Copy",
+    "delete": "Delete Delete",
+    "esc": "Esc Close",
+    "search": "Ctrl+F Search"
+  }
+}

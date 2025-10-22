@@ -1,0 +1,61 @@
+{
+  "common": {
+    "search": "Pesquisar",
+    "copy": "Copiar",
+    "copied": "Copiado!",
+    "delete": "Deletar",
+    "clear_all": "Limpar tudo",
+    "loading": "Carregando...",
+    "error": "Erro",
+    "success": "Sucesso",
+    "cancel": "Cancelar",
+    "ok": "OK"
+  },
+  "app": {
+    "title": "UClip - Gerenciador de Área de Transferência",
+    "subtitle": "Seu histórico de clips sempre à mão",
+    "empty_state": "Nenhum clip no histórico",
+    "empty_description": "Copie algo para começar!",
+    "loading_clips": "Carregando clips...",
+    "error_loading": "Erro ao carregar clips: {{error}}",
+    "search_placeholder": "Pesquisar clips...",
+    "copy_success": "Clip copiado para a área de transferência!",
+    "last_updated": "Última atualização: {{time}}"
+  },
+  "clipboard": {
+    "text": "Texto",
+    "image": "Imagem",
+    "unknown": "Desconhecido",
+    "preview": "Prévia",
+    "no_content": "Sem conteúdo para exibir"
+  },
+  "menu": {
+    "settings": "Configurações",
+    "about": "Sobre",
+    "quit": "Sair",
+    "help": "Ajuda"
+  },
+  "settings": {
+    "language": "Idioma",
+    "theme": "Tema",
+    "auto_copy": "Copiar automaticamente ao selecionar",
+    "minimize_on_copy": "Minimizar ao copiar",
+    "startup": "Iniciar com o sistema",
+    "keyboard_shortcuts": "Atalhos de Teclado"
+  },
+  "about": {
+    "title": "Sobre o UClip",
+    "version": "Versão {{version}}",
+    "description": "Um gerenciador de área de transferência moderno para Linux",
+    "author": "Jonatas Serra",
+    "license": "Licença MIT",
+    "repository": "Repositório GitHub"
+  },
+  "keyboard_shortcuts": {
+    "up_down": "↑↓ Navegar",
+    "enter": "Enter Copiar",
+    "delete": "Delete Deletar",
+    "esc": "Esc Fechar",
+    "search": "Ctrl+F Pesquisar"
+  }
+}

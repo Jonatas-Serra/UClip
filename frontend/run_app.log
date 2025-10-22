@@ -1,0 +1,3 @@
+[99196:1020/004044.741787:ERROR:command_buffer_proxy_impl.cc(319)] GPU state invalid after WaitForGetOffsetInRange.
+[99196:1020/004044.744511:ERROR:zygote_communication_linux.cc(290)] Failed to send GetTerminationStatus message to zygote
+[99196:1020/004044.755032:ERROR:network_service_instance_impl.cc(663)] Network service crashed, restarting service.

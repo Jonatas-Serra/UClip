@@ -1,0 +1,13 @@
+Loading index from: /home/jonatasserra/Projetos/UClip/frontend/dist/linux-unpacked/resources/app.asar/app/dist/index.html
+Global shortcut Super+V registration failed. On Wayland it may not be supported.
+[143355:1020/004044.755979:ERROR:command_buffer_proxy_impl.cc(319)] GPU state invalid after WaitForGetOffsetInRange.
+[135757:1020/004044.766435:ERROR:command_buffer_proxy_impl.cc(319)] GPU state invalid after WaitForGetOffsetInRange.
+[135757:1020/004044.767854:ERROR:zygote_communication_linux.cc(290)] Failed to send GetTerminationStatus message to zygote
+[135757:1020/004044.772780:ERROR:zygote_communication_linux.cc(290)] Failed to send GetTerminationStatus message to zygote
+[143355:1020/004044.778951:ERROR:gpu_process_host.cc(985)] GPU process launch failed: error_code=1002
+[143355:1020/004044.785036:ERROR:gpu_process_host.cc(985)] GPU process launch failed: error_code=1002
+[135757:1020/004044.779920:ERROR:gpu_process_host.cc(985)] GPU process launch failed: error_code=1002
+[135757:1020/004044.781059:ERROR:gpu_process_host.cc(985)] GPU process launch failed: error_code=1002
+[135757:1020/004044.783176:ERROR:gpu_process_host.cc(985)] GPU process launch failed: error_code=1002
+[135757:1020/004044.783787:ERROR:gpu_process_host.cc(985)] GPU process launch failed: error_code=1002
+[135757:1020/004044.784314:ERROR:gpu_process_host.cc(985)] GPU process launch failed: error_code=1002
