@@ -146,6 +146,25 @@ npm run dev  # Dev server em http://localhost:5173
 npm run build && npm run prepack && npx electron-builder --linux
 ```
 
+### 🧹 Limpeza de Dados de Desenvolvimento
+
+**Importante**: Antes de criar um build ou release, sempre limpe os dados de desenvolvimento:
+
+```bash
+# Usando Makefile
+make clean-dev-data
+
+# Ou diretamente o script
+./scripts/clean_dev_data.sh
+```
+
+Isso remove:
+- `uclip.db*` — Banco de dados SQLite com dados de teste
+- `images/` — Imagens copiadas durante desenvolvimento
+- `__pycache__/` e `*.pyc` — Cache Python
+
+> 💡 **Os scripts de build (`build_deb.sh` e `create_release.sh`) já fazem essa limpeza automaticamente!**
+
 Veja [docs/BUILD.md](docs/BUILD.md) para guia completo de desenvolvimento.
 
 ---

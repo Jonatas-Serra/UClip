@@ -10,5 +10,13 @@ node_modules/
 dist/
 build/
 
+# Database (development only - do not commit)
+*.db
+*.db-shm
+*.db-wal
+
+# Images directory (development data)
+images/
+
 # OS
 .DS_Store

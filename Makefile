@@ -2,7 +2,7 @@ VENV=.venv
 PYTHON=$(VENV)/bin/python
 PIP=$(VENV)/bin/pip
 
-.PHONY: setup run-backend run-listener run-local test
+.PHONY: setup run-backend run-listener run-local test package clean clean-dev-data
 
 setup:
 	@test -d $(VENV) || python3 -m venv $(VENV)
@@ -23,3 +23,13 @@ test:
 
 package:
 	bash scripts/build_electron_local.sh
+
+clean-dev-data:
+	@echo "🧹 Limpando dados de desenvolvimento..."
+	@bash scripts/clean_dev_data.sh
+
+clean: clean-dev-data
+	@echo "🧹 Limpando arquivos de build..."
+	@rm -rf frontend/dist frontend/app frontend/node_modules
+	@rm -rf $(VENV)
+	@echo "✅ Limpeza completa!"

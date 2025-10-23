@@ -25,6 +25,22 @@ fi
 
 echo -e "${BLUE}📦 Criando release ${VERSION}...${NC}\n"
 
+# 0. Limpar dados de desenvolvimento
+echo -e "${BLUE}0️⃣  Limpando dados de desenvolvimento...${NC}"
+if [ -f "uclip.db" ]; then
+    echo "   Removendo banco de dados de desenvolvimento"
+    rm -f uclip.db uclip.db-shm uclip.db-wal
+fi
+if [ -d "images" ]; then
+    echo "   Removendo diretório de imagens de desenvolvimento"
+    rm -rf images
+fi
+if [ -d "backend/images" ]; then
+    echo "   Removendo diretório de imagens do backend"
+    rm -rf backend/images
+fi
+echo -e "${GREEN}   ✓ Dados de desenvolvimento limpos${NC}\n"
+
 # 1. Atualizar package.json
 NUMERIC_VERSION=${VERSION#v}
 echo -e "${BLUE}1️⃣  Atualizando version em package.json...${NC}"

@@ -14,6 +14,22 @@ NC='\033[0m' # No Color
 
 echo -e "${BLUE}📦 Building DEB package for UClip...${NC}\n"
 
+# Step 0: Clean development database and images
+echo -e "${BLUE}0️⃣  Cleaning development data...${NC}"
+if [ -f "uclip.db" ]; then
+    echo "   Removing development database: uclip.db"
+    rm -f uclip.db uclip.db-shm uclip.db-wal
+fi
+if [ -d "images" ]; then
+    echo "   Removing development images directory"
+    rm -rf images
+fi
+if [ -d "backend/images" ]; then
+    echo "   Removing backend images directory"
+    rm -rf backend/images
+fi
+echo -e "${GREEN}   ✓ Development data cleaned${NC}\n"
+
 # Check if Node.js is installed
 if ! command -v node &> /dev/null; then
     echo -e "${RED}❌ Error: Node.js is not installed${NC}"
