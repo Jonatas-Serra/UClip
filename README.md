@@ -16,26 +16,47 @@ Um gerenciador de clipboard moderno, rápido e fácil de usar para Linux. Captur
 
 ### 🐧 Ubuntu / Debian / Linux Mint
 
-**Opção 1: AppImage** (Recomendado - sem instalação)
-```bash
-wget -O ~/UClip.AppImage https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.0/UClip-0.1.0.AppImage
-chmod +x ~/UClip.AppImage
-~/UClip.AppImage  # executar
-```
-
-**Opção 2: Pacote .deb** (Instalação permanente)
-```bash
-wget https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.0/UClip-0.1.0.deb
-sudo dpkg -i UClip-0.1.0.deb
-uclip  # executar
-```
-
-**Opção 3: Script automático** (tudo junto)
+**Opção 1: Script automático completo** (Recomendado - Instala tudo)
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/Jonatas-Serra/UClip/main/scripts/install.sh)
 ```
 
-### 🎯 Setup Backend (automático no script, ou manual)
+**Opção 2: Instalação manual em 2 passos**
+
+**Passo 1: Instalar Frontend (.deb)**
+```bash
+wget https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.2/UClip-0.1.2.deb
+sudo dpkg -i UClip-0.1.2.deb
+```
+
+**Passo 2: Configurar Backend (Python)**
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/Jonatas-Serra/UClip/main/scripts/setup-backend.sh)
+```
+
+**Opção 3: AppImage** (Apenas frontend, backend separado)
+```bash
+# Download AppImage
+wget -O ~/UClip.AppImage https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.2/UClip-0.1.2.AppImage
+chmod +x ~/UClip.AppImage
+
+# Configurar backend
+bash <(curl -fsSL https://raw.githubusercontent.com/Jonatas-Serra/UClip/main/scripts/setup-backend.sh)
+
+# Executar
+~/UClip.AppImage
+```
+
+### 🎯 Verificar Instalação
+
+```bash
+# Verificar se o frontend está instalado
+which uclip
+
+# Verificar se o backend está rodando
+systemctl --user status uclip-backend
+systemctl --user status uclip-listener
+```
 
 ```bash
 # Clonar repositório
