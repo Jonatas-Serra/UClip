@@ -128,27 +128,44 @@ jobs:
             
             ### 📥 Installation
             
-            **Ubuntu/Debian:**
+            **Ubuntu/Debian (.deb - Recommended):**
             ```bash
-            # Download and install
+            # Download and install (everything is configured automatically!)
             wget https://github.com/Jonatas-Serra/UClip/releases/download/${{ steps.version.outputs.VERSION }}/UClip-${{ steps.version.outputs.VERSION_NUMBER }}.deb
             sudo dpkg -i UClip-${{ steps.version.outputs.VERSION_NUMBER }}.deb
             
-            # Start backend services (first time only)
-            uclip-start-services
-            
-            # Launch UClip
+            # That's it! Backend, services, and database are all configured.
+            # Just launch UClip:
             uclip
             ```
             
-            **AppImage (Universal):**
+            ✅ **What the .deb installer does automatically:**
+            - Installs backend (Python) in `/opt/UClip`
+            - Creates and enables systemd services
+            - Sets up database with correct permissions
+            - Configures clipboard listener autostart
+            
+            **Verify installation:**
+            ```bash
+            # Check frontend
+            which uclip
+            
+            # Check backend services
+            systemctl status uclip-backend.service
+            systemctl status uclip-listener.service
+            
+            # View logs
+            sudo journalctl -u uclip-backend.service -f
+            ```
+            
+            **AppImage (Universal/Portable):**
             ```bash
             # Download
             wget https://github.com/Jonatas-Serra/UClip/releases/download/${{ steps.version.outputs.VERSION }}/UClip-${{ steps.version.outputs.VERSION_NUMBER }}.AppImage
             chmod +x UClip-${{ steps.version.outputs.VERSION_NUMBER }}.AppImage
             
-            # Note: Backend needs to be installed separately for AppImage
-            # See installation guide: https://github.com/Jonatas-Serra/UClip#installation
+            # Note: AppImage includes frontend only. Backend needs manual setup.
+            # For AppImage + Backend, use the .deb instead (recommended)
             
             ./UClip-${{ steps.version.outputs.VERSION_NUMBER }}.AppImage
             ```

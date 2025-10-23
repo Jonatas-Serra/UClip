@@ -23,80 +23,83 @@ bash <(curl -fsSL https://raw.githubusercontent.com/Jonatas-Serra/UClip/main/scr
 
 **Opção 2: Instalação manual em 2 passos** (Frontend + Backend)
 
-**Passo 1: Instalar Frontend (.deb com Backend incluído)**
+**Instalação em um comando** (recomendado - tudo automático!)
 ```bash
-wget https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.3/UClip-0.1.3.deb
-sudo dpkg -i UClip-0.1.3.deb
+wget https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.8/UClip-0.1.8.deb
+sudo dpkg -i UClip-0.1.8.deb
 ```
 
-**Passo 2: Configurar e iniciar Backend (Python)**
+✅ **É isso! Tudo configurado automaticamente:**
+- ✔️ Backend (Python) instalado em `/opt/UClip`
+- ✔️ Dependências Python instaladas
+- ✔️ Banco de dados criado com permissões corretas
+- ✔️ Serviços systemd criados e iniciados automaticamente
+- ✔️ Listener configurado para autostart na sua sessão
+
+**Próximo passo: Apenas execute:**
 ```bash
-# A versão 0.1.3 já inclui o backend no pacote
-# Agora configure o backend com:
-bash <(curl -fsSL https://raw.githubusercontent.com/Jonatas-Serra/UClip/main/scripts/setup-backend.sh)
-
-# Ou configure manualmente:
-cd ~/.local/share/uclip
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r backend/requirements.txt
-
-# Inicie os serviços:
-systemctl --user enable --now uclip-backend.service
-systemctl --user enable --now uclip-listener.service
+uclip
 ```
 
-**Opção 3: AppImage** (Apenas frontend, backend necessário separadamente)
+**Opção 2: AppImage** (versão portável, requer backend em separado)
 ```bash
 # Download AppImage
-wget -O ~/UClip.AppImage https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.3/UClip-0.1.3.AppImage
+wget -O ~/UClip.AppImage https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.8/UClip-0.1.8.AppImage
 chmod +x ~/UClip.AppImage
 
-# Configurar backend
-bash <(curl -fsSL https://raw.githubusercontent.com/Jonatas-Serra/UClip/main/scripts/setup-backend.sh)
-
-# Executar
+# Para usar AppImage com backend, siga as instruções de desenvolvimento abaixo
 ~/UClip.AppImage
 ```
 
 ### 🎯 Verificar Instalação
-```bash
-# Verificar frontend
-which uclip
-
-# Verificar backend
-systemctl --user status uclip-backend
-systemctl --user status uclip-listener
-
-# Ver logs em tempo real
-journalctl --user -u uclip-backend -f
-journalctl --user -u uclip-listener -f
-```
 
 ```bash
-# Verificar se o frontend está instalado
+# ✓ Verificar se o frontend está instalado
 which uclip
 
-# Verificar se o backend está rodando
-systemctl --user status uclip-backend
-systemctl --user status uclip-listener
+# ✓ Verificar se o backend está rodando (systemd services)
+systemctl status uclip-backend.service
+systemctl status uclip-listener.service
+
+# ✓ Ver logs em tempo real
+sudo journalctl -u uclip-backend.service -f
+sudo journalctl -u uclip-listener.service -f
+
+# ✓ Testar se o backend está respondendo
+curl http://127.0.0.1:8001/health
 ```
+
+---
+
+## 🔧 Modo Desenvolvimento
+
+Para desenvolver ou contribuir no UClip:
 
 ```bash
 # Clonar repositório
 git clone https://github.com/Jonatas-Serra/UClip.git
 cd UClip
 
-# Instalar backend
+# 1. Backend (Python + FastAPI)
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r backend/requirements.txt
 
-# Iniciar (o atalho Super+V ativa a janela)
-python3 scripts/run_local.sh
+# Iniciar backend em terminal separado
+python3 backend/cli/run_api.py          # API em localhost:8001
+# ou em outro terminal:
+python3 backend/cli/run_listener.py     # Listener de clipboard
+
+# 2. Frontend (React + Vite)
+cd frontend
+npm install
+npm run dev                              # Vite dev server em localhost:5173
+
+# 3. Em outro terminal, lance Electron
+npm run electron:dev
 ```
 
-**Pronto!** Pressione **Super+V** (Windows key + V) para abrir o UClip.
+**Pronto!** A aplicação rodará em modo desenvolvimento com hot reload.
 
 ---
 

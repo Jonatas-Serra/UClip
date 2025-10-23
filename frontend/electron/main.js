@@ -218,6 +218,9 @@ function createTray() {
   }
 }
 
+// Disable hardware acceleration for environments without GPU support
+app.disableHardwareAcceleration()
+
 app.whenReady().then(async () => {
   await createWindow()
   createTray()
