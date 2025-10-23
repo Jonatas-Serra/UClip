@@ -25,8 +25,8 @@ chmod +x ~/UClip.AppImage
 
 **Opção 2: Pacote .deb** (Instalação permanente)
 ```bash
-wget https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.0/uclip-frontend_0.1.0_amd64.deb
-sudo dpkg -i uclip-frontend_0.1.0_amd64.deb
+wget https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.0/UClip-0.1.0.deb
+sudo dpkg -i UClip-0.1.0.deb
 uclip  # executar
 ```
 

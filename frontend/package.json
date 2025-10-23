@@ -5,7 +5,7 @@
   "main": "electron/main.js",
   "description": "UClip - Ubuntu clipboard manager (frontend)",
   "author": "Jonatas Serra <jonatasserra@outlook.com>",
-  "homepage": "https://github.com/jonatasserra/UClip",
+  "homepage": "https://github.com/Jonatas-Serra/UClip",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
