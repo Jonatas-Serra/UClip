@@ -67,16 +67,39 @@ jobs:
           echo "=== Searching for build artifacts ==="
           find frontend -type f \( -name "*.AppImage" -o -name "*.deb" \) 2>/dev/null | head -20
           echo ""
-          echo "=== Content of frontend directory ==="
-          ls -lah frontend/ | grep -E "AppImage|deb" || echo "No AppImage or deb files in frontend/"
-          echo ""
           echo "=== Content of frontend/dist ==="
-          ls -lah frontend/dist/ 2>/dev/null | tail -20 || echo "frontend/dist not found"
+          ls -lah frontend/dist/ 2>/dev/null || echo "frontend/dist not found"
 
       # Extract version from tag
       - name: Extract version
         id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          VERSION_NUMBER=${VERSION#v}
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          echo "VERSION_NUMBER=${VERSION_NUMBER}" >> $GITHUB_OUTPUT
+
+      # Rename files to match expected pattern
+      - name: Rename build artifacts
+        run: |
+          cd frontend/dist
+          # Rename .deb file
+          if [ -f uclip-frontend_*.deb ]; then
+            DEB_FILE=$(ls uclip-frontend_*.deb)
+            NEW_DEB_NAME="UClip-${{ steps.version.outputs.VERSION_NUMBER }}.deb"
+            mv "$DEB_FILE" "$NEW_DEB_NAME"
+            echo "Renamed $DEB_FILE to $NEW_DEB_NAME"
+          fi
+          # Rename .AppImage file
+          if [ -f uclip-frontend-*.AppImage ]; then
+            APPIMAGE_FILE=$(ls uclip-frontend-*.AppImage)
+            NEW_APPIMAGE_NAME="UClip-${{ steps.version.outputs.VERSION_NUMBER }}.AppImage"
+            mv "$APPIMAGE_FILE" "$NEW_APPIMAGE_NAME"
+            echo "Renamed $APPIMAGE_FILE to $NEW_APPIMAGE_NAME"
+          fi
+          echo ""
+          echo "=== Final files ==="
+          ls -lah UClip-*
 
       # Create GitHub Release with assets
       - name: Create GitHub Release
@@ -89,8 +112,26 @@ jobs:
           files: |
             frontend/dist/UClip-*.AppImage
             frontend/dist/UClip-*.deb
-            frontend/UClip-*.AppImage
-            frontend/UClip-*.deb
+          body: |
+            ## 📦 UClip ${{ steps.version.outputs.VERSION }}
+            
+            ### 📥 Installation
+            
+            **Ubuntu/Debian:**
+            ```bash
+            wget https://github.com/Jonatas-Serra/UClip/releases/download/${{ steps.version.outputs.VERSION }}/UClip-${{ steps.version.outputs.VERSION_NUMBER }}.deb
+            sudo dpkg -i UClip-${{ steps.version.outputs.VERSION_NUMBER }}.deb
+            ```
+            
+            **AppImage (Universal):**
+            ```bash
+            wget https://github.com/Jonatas-Serra/UClip/releases/download/${{ steps.version.outputs.VERSION }}/UClip-${{ steps.version.outputs.VERSION_NUMBER }}.AppImage
+            chmod +x UClip-${{ steps.version.outputs.VERSION_NUMBER }}.AppImage
+            ./UClip-${{ steps.version.outputs.VERSION_NUMBER }}.AppImage
+            ```
+            
+            ### ✨ What's New
+            See [CHANGELOG.md](https://github.com/Jonatas-Serra/UClip/blob/main/docs/CHANGELOG.md) for details.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

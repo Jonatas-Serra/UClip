@@ -51,7 +51,22 @@ npm run prepack
 echo -e "${BLUE}4️⃣  Building DEB package...${NC}"
 npx electron-builder --linux deb --publish never
 
-# Step 5: Check if DEB was created
+# Step 5: Rename and check if DEB was created
+echo -e "${BLUE}5️⃣  Renaming packages...${NC}"
+cd dist
+
+# Get version from package.json
+VERSION=$(node -p "require('../package.json').version")
+
+# Rename .deb file
+if ls uclip-frontend_*.deb 1> /dev/null 2>&1; then
+    OLD_DEB=$(ls -t uclip-frontend_*.deb | head -1)
+    NEW_DEB="UClip-${VERSION}.deb"
+    mv "$OLD_DEB" "$NEW_DEB"
+    echo "   Renamed: $OLD_DEB → $NEW_DEB"
+fi
+
+# Check if renamed DEB exists
 if ls UClip-*.deb 1> /dev/null 2>&1; then
     DEB_FILE=$(ls -t UClip-*.deb | head -1)
     DEB_SIZE=$(du -h "$DEB_FILE" | cut -f1)
@@ -68,12 +83,26 @@ if ls UClip-*.deb 1> /dev/null 2>&1; then
     echo "   ar x $DEB_FILE"
 else
     echo -e "${RED}❌ Failed to create DEB package${NC}"
+    cd ..
     exit 1
 fi
 
+cd ..
+
 # Step 6: Try to build AppImage too
-echo -e "${BLUE}5️⃣  Building AppImage package...${NC}"
+echo -e "${BLUE}6️⃣  Building AppImage package...${NC}"
 npx electron-builder --linux AppImage --publish never
+
+echo -e "${BLUE}7️⃣  Renaming AppImage...${NC}"
+cd dist
+
+# Rename .AppImage file
+if ls uclip-frontend-*.AppImage 1> /dev/null 2>&1; then
+    OLD_APPIMAGE=$(ls -t uclip-frontend-*.AppImage | head -1)
+    NEW_APPIMAGE="UClip-${VERSION}.AppImage"
+    mv "$OLD_APPIMAGE" "$NEW_APPIMAGE"
+    echo "   Renamed: $OLD_APPIMAGE → $NEW_APPIMAGE"
+fi
 
 if ls UClip-*.AppImage 1> /dev/null 2>&1; then
     APPIMAGE_FILE=$(ls -t UClip-*.AppImage | head -1)
@@ -94,3 +123,5 @@ echo -e "${GREEN}✅ Build complete!${NC}"
 echo ""
 echo -e "${BLUE}📍 Generated files:${NC}"
 ls -lh UClip-*.deb UClip-*.AppImage 2>/dev/null || echo "No packages found"
+
+cd ..
