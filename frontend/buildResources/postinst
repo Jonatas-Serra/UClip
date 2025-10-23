@@ -105,6 +105,19 @@ chmod +x /usr/local/bin/uclip-listener
 # Create symlink for the Electron app
 ln -sf /opt/UClip/uclip /usr/local/bin/uclip || true
 
+# Ensure SUID sandbox helper is correctly configured so Electron can run the sandbox
+if [ -f "$INSTALL_DIR/chrome-sandbox" ]; then
+    echo "[UClip] Fixing chrome-sandbox ownership and permissions..."
+    chown root:root "$INSTALL_DIR/chrome-sandbox" || true
+    chmod 4755 "$INSTALL_DIR/chrome-sandbox" || true
+fi
+
+# Also ensure crashpad handler is executable by root if present
+if [ -f "$INSTALL_DIR/chrome_crashpad_handler" ]; then
+    chown root:root "$INSTALL_DIR/chrome_crashpad_handler" || true
+    chmod 4755 "$INSTALL_DIR/chrome_crashpad_handler" || true
+fi
+
 # Create systemd system services (not user services)
 mkdir -p /etc/systemd/system
 
