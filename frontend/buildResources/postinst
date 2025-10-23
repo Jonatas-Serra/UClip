@@ -192,7 +192,7 @@ for user_home in /home/*/; do
         chown "$username:$username" "$user_home/.config/autostart"
         
         # Create .desktop file for listener
-        cat > "$user_home/.config/autostart/uclip-listener.desktop" << 'DESKTOP'
+    cat > "$user_home/.config/autostart/uclip-listener.desktop" << 'DESKTOP'
 [Desktop Entry]
 Type=Application
 Name=UClip Clipboard Listener
@@ -200,8 +200,10 @@ Comment=UClip Clipboard Listener
 Exec=/usr/local/bin/uclip-listener
 Icon=uclip
 Categories=Utility;
-Hidden=true
-NoDisplay=true
+# Ensure the autostart entry is visible to the session and enabled so the listener
+# starts in the user's graphical session (needed for clipboard access on X11/Wayland)
+Hidden=false
+NoDisplay=false
 X-GNOME-Autostart-enabled=true
 DESKTOP
         
