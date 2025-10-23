@@ -68,7 +68,29 @@ function createWindow() {
       } catch (e) { /* ignore */ }
     })()
   } else {
-    win.loadFile(path.join(__dirname, '..', 'frontend', 'dist', 'index.html'))
+    // Try multiple paths: packaged app structure vs dev structure
+    const possiblePaths = [
+      path.join(__dirname, '..', 'app', 'dist', 'index.html'),           // resources/app/dist
+      path.join(__dirname, '..', 'frontend', 'dist', 'index.html'),      // development structure
+    ]
+    
+    let loaded = false
+    for (const filePath of possiblePaths) {
+      try {
+        console.log('Trying to load:', filePath)
+        win.loadFileSync ? win.loadFileSync(filePath) : null
+        win.loadFile(filePath)
+        console.log('Successfully loaded:', filePath)
+        loaded = true
+        break
+      } catch (e) {
+        console.log('Failed to load:', filePath, e.message)
+      }
+    }
+    
+    if (!loaded) {
+      console.error('Could not find index.html in any of the expected locations')
+    }
   }
 }
 

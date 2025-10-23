@@ -1,0 +1,212 @@
+#!/bin/bash
+
+# UClip DEB Post-installation Script
+# Executed automatically by dpkg after package installation
+
+set -e
+
+INSTALL_DIR="/opt/UClip"
+# Tentar encontrar backend em três locais possíveis
+BACKEND_DIR=""
+if [ -d "$INSTALL_DIR/resources/app/app/backend" ]; then
+    BACKEND_DIR="$INSTALL_DIR/resources/app/app/backend"
+elif [ -d "$INSTALL_DIR/app/backend" ]; then
+    BACKEND_DIR="$INSTALL_DIR/app/backend"
+elif [ -d "$INSTALL_DIR/backend" ]; then
+    BACKEND_DIR="$INSTALL_DIR/backend"
+fi
+
+VENV_DIR="$INSTALL_DIR/.venv"
+
+echo "[UClip] Configurando backend..."
+echo "[UClip] Diretório de instalação: $INSTALL_DIR"
+echo "[UClip] Diretório do backend: $BACKEND_DIR"
+
+# Check if Python 3 is installed
+if ! command -v python3 &> /dev/null; then
+    echo "[UClip] Instalando Python 3..."
+    apt-get update || true
+    apt-get install -y python3 python3-pip python3-venv xclip wl-clipboard || true
+fi
+
+# Verificar se Python 3 foi instalado com sucesso
+if ! command -v python3 &> /dev/null; then
+    echo "[UClip] ❌ Erro: Python 3 não foi instalado"
+    exit 1
+fi
+
+# Create virtual environment if not exists
+if [ ! -d "$VENV_DIR" ]; then
+    echo "[UClip] Criando ambiente virtual Python..."
+    python3 -m venv "$VENV_DIR" || {
+        echo "[UClip] ❌ Erro ao criar ambiente virtual"
+        exit 1
+    }
+fi
+
+# Install backend dependencies
+if [ -f "$BACKEND_DIR/requirements.txt" ]; then
+    echo "[UClip] Instalando dependências do backend..."
+    "$VENV_DIR/bin/pip" install --upgrade pip || {
+        echo "[UClip] ⚠️  Aviso: Erro ao atualizar pip"
+    }
+    "$VENV_DIR/bin/pip" install -r "$BACKEND_DIR/requirements.txt" || {
+        echo "[UClip] ❌ Erro ao instalar dependências do backend"
+        exit 1
+    }
+else
+    echo "[UClip] ⚠️  Aviso: requirements.txt não encontrado em $BACKEND_DIR"
+fi
+
+# Fix database permissions to allow users to write
+echo "[UClip] Corrigindo permissões do banco de dados..."
+if [ -f "$INSTALL_DIR/resources/app/app/uclip.db" ]; then
+    chmod 666 "$INSTALL_DIR/resources/app/app/uclip.db" || true
+    chmod 777 "$INSTALL_DIR/resources/app/app" || true
+fi
+
+# Create wrapper scripts
+mkdir -p /usr/local/bin
+
+cat > /usr/local/bin/uclip-api << 'SCRIPT'
+#!/bin/bash
+cd /opt/UClip
+
+# Encontrar o backend em locais possíveis
+if [ -d "resources/app/app/backend" ]; then
+    cd resources/app/app
+elif [ -d "app/backend" ]; then
+    cd app
+fi
+
+# Ativar virtual environment e executar
+source /opt/UClip/.venv/bin/activate
+exec python3 backend/cli/run_api.py
+SCRIPT
+chmod +x /usr/local/bin/uclip-api
+
+cat > /usr/local/bin/uclip-listener << 'SCRIPT'
+#!/bin/bash
+cd /opt/UClip
+
+# Encontrar o backend em locais possíveis
+if [ -d "resources/app/app/backend" ]; then
+    cd resources/app/app
+elif [ -d "app/backend" ]; then
+    cd app
+fi
+
+# Ativar virtual environment e executar
+source /opt/UClip/.venv/bin/activate
+exec python3 backend/cli/run_listener.py
+SCRIPT
+chmod +x /usr/local/bin/uclip-listener
+
+# Create systemd system services (not user services)
+mkdir -p /etc/systemd/system
+
+cat > /etc/systemd/system/uclip-backend.service << 'SERVICE'
+[Unit]
+Description=UClip Backend API
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/UClip
+ExecStart=/usr/local/bin/uclip-api
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=uclip-backend
+Environment="PATH=/opt/UClip/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="PYTHONUNBUFFERED=1"
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+
+cat > /etc/systemd/system/uclip-listener.service << 'SERVICE'
+[Unit]
+Description=UClip Clipboard Listener
+After=network.target uclip-backend.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/UClip
+ExecStart=/usr/local/bin/uclip-listener
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=uclip-listener
+Environment="PATH=/opt/UClip/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="PYTHONUNBUFFERED=1"
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+
+# Reload systemd daemon
+echo "[UClip] Recarregando daemon do systemd..."
+systemctl daemon-reload
+
+# Enable and start services
+echo "[UClip] Habilitando e iniciando serviços..."
+systemctl enable uclip-backend.service || {
+    echo "[UClip] ⚠️  Erro ao habilitar uclip-backend.service"
+}
+systemctl enable uclip-listener.service || {
+    echo "[UClip] ⚠️  Erro ao habilitar uclip-listener.service"
+}
+
+# Try to start services
+systemctl start uclip-backend.service || {
+    echo "[UClip] ⚠️  Erro ao iniciar uclip-backend.service (será iniciado no próximo boot)"
+}
+
+# Wait a bit for the backend to start before starting the listener
+sleep 2
+
+systemctl start uclip-listener.service || {
+    echo "[UClip] ⚠️  Erro ao iniciar uclip-listener.service (será iniciado no próximo boot)"
+}
+
+echo "[UClip] Backend configurado com sucesso!"
+echo "[UClip] Para verificar o status dos serviços execute:"
+echo "[UClip]   systemctl status uclip-backend.service"
+echo "[UClip]   systemctl status uclip-listener.service"
+
+# Call setup-autostart.sh for each user to configure desktop autostart
+echo "[UClip] Configurando autostart para usuários..."
+for user_home in /home/*/; do
+    if [ -d "$user_home" ]; then
+        username=$(basename "$user_home")
+        echo "[UClip] Configurando autostart para usuário: $username"
+        
+        # Create autostart directory for user
+        mkdir -p "$user_home/.config/autostart"
+        chown "$username:$username" "$user_home/.config/autostart"
+        
+        # Create .desktop file for listener
+        cat > "$user_home/.config/autostart/uclip-listener.desktop" << 'DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=UClip Clipboard Listener
+Comment=UClip Clipboard Listener
+Exec=/usr/local/bin/uclip-listener
+Icon=uclip
+Categories=Utility;
+Hidden=true
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+DESKTOP
+        
+        chown "$username:$username" "$user_home/.config/autostart/uclip-listener.desktop"
+        
+        echo "[UClip] ✓ Autostart configurado para $username"
+    fi
+done
+
+echo "[UClip] ✅ Configuração concluída!"
+echo "[UClip] ℹ️  O listener será iniciado automaticamente quando você fizer login na sessão gráfica"

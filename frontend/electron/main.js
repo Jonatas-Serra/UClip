@@ -5,6 +5,28 @@ const fs = require('fs')
 let win = null
 let tray = null
 
+// Helper function to resolve icon path across different environments
+function resolveIconPath() {
+  const candidates = [
+    // When packaged: installed location with app/app structure
+    path.join(__dirname, '..', 'app', 'assets', 'icon.png'),
+    // When packaged: alternative location
+    path.join(__dirname, '..', 'assets', 'icon.png'),
+    // Development location
+    path.join(__dirname, '..', 'buildResources', 'icon.png'),
+  ]
+  
+  for (const iconPath of candidates) {
+    if (fs.existsSync(iconPath)) {
+      console.log('Using icon:', iconPath)
+      return iconPath
+    }
+  }
+  
+  console.warn('No icon found in any candidate locations')
+  return undefined
+}
+
 function toggleWindow() {
   if (!win) return
   try {
@@ -26,10 +48,11 @@ async function createWindow() {
     show: false,
     frame: false,
     alwaysOnTop: true,
-    icon: path.join(__dirname, '..', 'buildResources', 'icon.png'),
+    icon: resolveIconPath(),
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: false,
       preload: path.join(__dirname, 'preload.js'),
     },
   })
@@ -97,6 +120,8 @@ async function createWindow() {
         candidates.push(path.join(process.resourcesPath, 'app.asar', 'dist', 'index.html'))
         candidates.push(path.join(process.resourcesPath, 'app.asar', 'app', 'dist', 'index.html'))
         candidates.push(path.join(process.resourcesPath, 'app.asar', 'dist', 'linux-unpacked', 'dist', 'index.html'))
+        candidates.push(path.join(process.resourcesPath, 'app', 'app', 'dist', 'index.html'))
+        candidates.push(path.join(process.resourcesPath, 'app', 'dist', 'index.html'))
         candidates.push(path.join(process.resourcesPath, '..', 'dist', 'index.html'))
       }
       // Fallback when not packaged or during development builds
@@ -144,46 +169,30 @@ function createTray() {
   
   // Wrap the entire createTray logic in a try-catch to prevent unhandled promise rejections
   try {
-    const trayIconPath = path.join(__dirname, '..', 'buildResources', 'icon-64x64.png')
-    const defaultIcon = path.join(__dirname, '..', 'assets', 'icon.png')
-    const iconPath = fs.existsSync(trayIconPath) ? trayIconPath : defaultIcon
-
-    let trayIconToUse = null
-    const candidates = [
-      iconPath,
-      path.join(process.resourcesPath || '', 'app.asar', 'assets', 'icon.png'),
-      path.join(process.resourcesPath || '', 'app.asar', 'app', 'assets', 'icon.png'),
-      path.join(process.resourcesPath || '', '..', 'uclip-frontend.png'),
-      path.join(process.resourcesPath || '', '..', 'resources', 'assets', 'icon.png'),
-      path.join(process.resourcesPath || '', '..', 'usr', 'share', 'icons', 'hicolor', '256x256', 'apps', 'uclip-frontend.png'),
-      path.join(process.resourcesPath || '', '..', 'usr', 'share', 'icons', 'hicolor', '128x128', 'apps', 'uclip-frontend.png'),
-      path.join(process.resourcesPath || '', '..', 'usr', 'share', 'icons', 'hicolor', '64x64', 'apps', 'uclip-frontend.png'),
+    const trayIconCandidates = [
+      // When packaged: installed location with app/app structure
+      path.join(__dirname, '..', 'app', 'assets', 'icon-64x64.png'),
+      path.join(__dirname, '..', 'app', 'assets', 'icon.png'),
+      // When packaged: alternative location
+      path.join(__dirname, '..', 'assets', 'icon-64x64.png'),
+      path.join(__dirname, '..', 'assets', 'icon.png'),
+      // Development
+      path.join(__dirname, '..', 'buildResources', 'icon-64x64.png'),
+      path.join(__dirname, '..', 'buildResources', 'icon.png'),
     ]
 
-    for (const c of candidates) {
-      try {
-        if (!c) continue
-        if (!fs.existsSync(c)) continue
-        const stat = fs.statSync(c)
-        if (!stat || stat.size === 0) continue
-        try {
-          const data = fs.readFileSync(c)
-          const tmp = path.join(app.getPath('temp'), `uclip-tray-icon-${Math.random().toString(36).slice(2, 8)}.png`)
-          fs.writeFileSync(tmp, data)
-          trayIconToUse = tmp
-          console.log('✓ Tray icon loaded from:', c)
-          break
-        } catch (e) {
-          continue
-        }
-      } catch (e) {
-        continue
+    let trayIconToUse = null
+    for (const candidate of trayIconCandidates) {
+      if (fs.existsSync(candidate)) {
+        trayIconToUse = candidate
+        console.log('Using tray icon:', trayIconToUse)
+        break
       }
     }
 
     if (!trayIconToUse) {
       console.warn('Could not find tray icon, using empty/default')
-      trayIconToUse = defaultIcon
+      trayIconToUse = trayIconCandidates[0] // fallback to first candidate even if not found
     }
 
     try {

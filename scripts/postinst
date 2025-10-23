@@ -8,8 +8,15 @@ set -e
 INSTALL_DIR="/opt/UClip"
 BACKEND_DIR="$INSTALL_DIR/backend"
 VENV_DIR="$INSTALL_DIR/.venv"
+RESOURCES_BACKEND="$INSTALL_DIR/resources/app/app/backend"
 
 echo "[UClip] Configurando backend..."
+
+# Copy backend from resources if not already at root
+if [ ! -d "$BACKEND_DIR" ] && [ -d "$RESOURCES_BACKEND" ]; then
+    echo "[UClip] Copiando backend..."
+    cp -r "$RESOURCES_BACKEND" "$BACKEND_DIR"
+fi
 
 # Check if Python 3 is installed
 if ! command -v python3 &> /dev/null; then
@@ -60,8 +67,6 @@ After=network.target
 
 [Service]
 Type=simple
-User=%i
-Group=%i
 WorkingDirectory=/opt/UClip
 ExecStart=/usr/local/bin/uclip-api
 Restart=on-failure
@@ -69,7 +74,7 @@ RestartSec=5
 Environment="PATH=/opt/UClip/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
 SERVICE
 
 cat > /etc/systemd/system/uclip-listener.service << 'SERVICE'
@@ -79,8 +84,6 @@ After=uclip-backend.service
 
 [Service]
 Type=simple
-User=%i
-Group=%i
 WorkingDirectory=/opt/UClip
 ExecStart=/usr/local/bin/uclip-listener
 Restart=on-failure
@@ -88,7 +91,7 @@ RestartSec=5
 Environment="PATH=/opt/UClip/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
 SERVICE
 
 # Reload systemd daemon

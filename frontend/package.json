@@ -1,6 +1,6 @@
 {
   "name": "uclip-frontend",
-  "version": "0.1.4",
+  "version": "0.1.8",
   "private": true,
   "main": "electron/main.js",
   "description": "UClip - Ubuntu clipboard manager (frontend)",
@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "prepack": "npm run build && rm -rf app && mkdir -p app && cp -r dist app/dist && mkdir -p app/backend && cp -r ../backend app/backend && find app/backend -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true && find app/backend -name '*.pyc' -delete && rm -f app/backend/*.db* && rm -rf app/backend/images",
+    "prepack": "npm run build && rm -rf app && mkdir -p app && cp -r dist app/dist && cp -r buildResources app/assets && cp -r ../backend app/backend && find app/backend -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true && find app/backend -name '*.pyc' -delete && rm -f app/backend/*.db* && rm -rf app/backend/images",
     "preview": "vite preview",
     "dev:electron": "cross-env UCLIP_DEV=1 electron ../electron/main.js"
   },
@@ -32,6 +32,7 @@
     "appId": "com.uclip.app",
     "productName": "UClip",
     "files": ["app/**/*", "electron/**/*", "package.json"],
+    "asar": false,
     "directories": {
       "buildResources": "buildResources",
       "output": "dist"
@@ -47,7 +48,7 @@
       "category": "Utility",
       "packageName": "uclip",
       "artifactName": "UClip-${version}.deb",
-      "afterInstall": "../scripts/postinst"
+      "afterInstall": "buildResources/postinst"
     }
   }
 }
