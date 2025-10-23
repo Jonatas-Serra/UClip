@@ -39,11 +39,12 @@
     "linux": {
       "target": ["AppImage", "deb"],
       "category": "Utility",
-      "icon": "buildResources/icon.png"
+      "icon": "buildResources/icon-512x512.png"
     },
     "deb": {
       "depends": ["libxss1"],
-      "category": "Utility"
+      "category": "Utility",
+      "packageName": "uclip"
     }
   }
 }
