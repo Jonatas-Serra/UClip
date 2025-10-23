@@ -102,6 +102,9 @@ exec python3 backend/cli/run_listener.py
 SCRIPT
 chmod +x /usr/local/bin/uclip-listener
 
+# Create symlink for the Electron app
+ln -sf /opt/UClip/uclip /usr/local/bin/uclip || true
+
 # Create systemd system services (not user services)
 mkdir -p /etc/systemd/system
 
