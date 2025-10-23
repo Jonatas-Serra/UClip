@@ -31,12 +31,17 @@
   "build": {
     "appId": "com.uclip.app",
     "productName": "UClip",
-  "files": ["app/**/*", "electron/**/*", "package.json"],
+    "files": ["app/**/*", "electron/**/*", "package.json"],
     "directories": {
-      "buildResources": "buildResources"
+      "buildResources": "buildResources",
+      "output": "dist"
     },
     "linux": {
-      "target": ["AppImage", "deb"]
+      "target": ["AppImage", "deb"],
+      "category": "Utility"
+    },
+    "deb": {
+      "depends": ["libxss1"]
     }
   }
 }
