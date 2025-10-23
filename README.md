@@ -21,23 +21,35 @@ Um gerenciador de clipboard moderno, rápido e fácil de usar para Linux. Captur
 bash <(curl -fsSL https://raw.githubusercontent.com/Jonatas-Serra/UClip/main/scripts/install.sh)
 ```
 
-**Opção 2: Instalação manual em 2 passos**
+**Opção 2: Instalação manual em 2 passos** (Frontend + Backend)
 
-**Passo 1: Instalar Frontend (.deb)**
+**Passo 1: Instalar Frontend (.deb com Backend incluído)**
 ```bash
-wget https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.2/UClip-0.1.2.deb
-sudo dpkg -i UClip-0.1.2.deb
+wget https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.3/UClip-0.1.3.deb
+sudo dpkg -i UClip-0.1.3.deb
 ```
 
-**Passo 2: Configurar Backend (Python)**
+**Passo 2: Configurar e iniciar Backend (Python)**
 ```bash
+# A versão 0.1.3 já inclui o backend no pacote
+# Agora configure o backend com:
 bash <(curl -fsSL https://raw.githubusercontent.com/Jonatas-Serra/UClip/main/scripts/setup-backend.sh)
+
+# Ou configure manualmente:
+cd ~/.local/share/uclip
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r backend/requirements.txt
+
+# Inicie os serviços:
+systemctl --user enable --now uclip-backend.service
+systemctl --user enable --now uclip-listener.service
 ```
 
-**Opção 3: AppImage** (Apenas frontend, backend separado)
+**Opção 3: AppImage** (Apenas frontend, backend necessário separadamente)
 ```bash
 # Download AppImage
-wget -O ~/UClip.AppImage https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.2/UClip-0.1.2.AppImage
+wget -O ~/UClip.AppImage https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.3/UClip-0.1.3.AppImage
 chmod +x ~/UClip.AppImage
 
 # Configurar backend
@@ -48,6 +60,18 @@ bash <(curl -fsSL https://raw.githubusercontent.com/Jonatas-Serra/UClip/main/scr
 ```
 
 ### 🎯 Verificar Instalação
+```bash
+# Verificar frontend
+which uclip
+
+# Verificar backend
+systemctl --user status uclip-backend
+systemctl --user status uclip-listener
+
+# Ver logs em tempo real
+journalctl --user -u uclip-backend -f
+journalctl --user -u uclip-listener -f
+```
 
 ```bash
 # Verificar se o frontend está instalado
