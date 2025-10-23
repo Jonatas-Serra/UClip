@@ -38,10 +38,12 @@
     },
     "linux": {
       "target": ["AppImage", "deb"],
-      "category": "Utility"
+      "category": "Utility",
+      "icon": "buildResources/icon.png"
     },
     "deb": {
-      "depends": ["libxss1"]
+      "depends": ["libxss1"],
+      "category": "Utility"
     }
   }
 }

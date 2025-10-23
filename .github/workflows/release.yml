@@ -33,7 +33,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libxss1
+          sudo apt-get install -y libxss1 fakeroot dpkg
 
       # Install frontend dependencies
       - name: Install frontend dependencies
@@ -57,19 +57,22 @@ jobs:
       - name: Build AppImage and DEB
         run: |
           cd frontend
-          npx electron-builder --linux --publish never
+          npx electron-builder --linux deb AppImage --publish never -v
         env:
-          # Desabilita análise automática de dependências nativas
           SKIP_NOTARIZATION: true
+          DEBUG: 'electron-builder'
 
       # List generated files for debugging
       - name: List build artifacts
         run: |
-          echo "=== Files in frontend/dist ==="
-          find frontend/dist -type f -name "*.AppImage" -o -name "*.deb" 2>/dev/null || echo "No files found in dist"
+          echo "=== Searching for build artifacts ==="
+          find frontend -type f \( -name "*.AppImage" -o -name "*.deb" \) 2>/dev/null | head -20
           echo ""
-          echo "=== Files in frontend ==="
-          find frontend -maxdepth 1 -type f \( -name "*.AppImage" -o -name "*.deb" \) 2>/dev/null || echo "No files found in frontend root"
+          echo "=== Content of frontend directory ==="
+          ls -lah frontend/ | grep -E "AppImage|deb" || echo "No AppImage or deb files in frontend/"
+          echo ""
+          echo "=== Content of frontend/dist ==="
+          ls -lah frontend/dist/ 2>/dev/null | tail -20 || echo "frontend/dist not found"
 
       # Extract version from tag
       - name: Extract version
