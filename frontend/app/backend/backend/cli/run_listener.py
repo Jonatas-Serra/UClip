@@ -8,18 +8,27 @@ import logging
 import sys
 import os
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
 # Add parent directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from backend.services.clipboard_listener import ClipboardListener
 
+logger = logging.getLogger(__name__)
+
 
 def main():
-    logging.basicConfig(level=logging.INFO)
+    logger.info("Starting UClip Clipboard Listener")
     l = ClipboardListener()
     l.start()
 
     def _stop(signum, frame):
+        logger.info("Stopping UClip Clipboard Listener")
         l.stop()
         raise SystemExit(0)
 
@@ -31,6 +40,9 @@ def main():
             time.sleep(1)
     except SystemExit:
         pass
+    except Exception as e:
+        logger.error(f"Error in listener: {e}", exc_info=True)
+        raise
 
 
 if __name__ == '__main__':

@@ -1,0 +1,122 @@
+#!/bin/bash
+
+# UClip DEB Post-installation Script
+# Executed automatically by dpkg after package installation
+
+set -e
+
+INSTALL_DIR="/opt/UClip"
+BACKEND_DIR="$INSTALL_DIR/backend"
+VENV_DIR="$INSTALL_DIR/.venv"
+
+echo "[UClip] Configurando backend..."
+
+# Check if Python 3 is installed
+if ! command -v python3 &> /dev/null; then
+    echo "[UClip] Instalando Python 3..."
+    apt-get update > /dev/null 2>&1 || true
+    apt-get install -y python3 python3-pip python3-venv xclip wl-clipboard > /dev/null 2>&1 || true
+fi
+
+# Create virtual environment if not exists
+if [ ! -d "$VENV_DIR" ]; then
+    echo "[UClip] Criando ambiente virtual Python..."
+    python3 -m venv "$VENV_DIR" 2>/dev/null || true
+fi
+
+# Install backend dependencies
+if [ -f "$BACKEND_DIR/requirements.txt" ]; then
+    echo "[UClip] Instalando dependências do backend..."
+    "$VENV_DIR/bin/pip" install --upgrade pip > /dev/null 2>&1 || true
+    "$VENV_DIR/bin/pip" install -r "$BACKEND_DIR/requirements.txt" > /dev/null 2>&1 || true
+fi
+
+# Create wrapper scripts
+mkdir -p /usr/local/bin
+
+cat > /usr/local/bin/uclip-api << 'SCRIPT'
+#!/bin/bash
+cd /opt/UClip
+source .venv/bin/activate
+exec python backend/cli/run_api.py
+SCRIPT
+chmod +x /usr/local/bin/uclip-api
+
+cat > /usr/local/bin/uclip-listener << 'SCRIPT'
+#!/bin/bash
+cd /opt/UClip
+source .venv/bin/activate
+exec python backend/cli/run_listener.py
+SCRIPT
+chmod +x /usr/local/bin/uclip-listener
+
+# Create systemd system services (not user services)
+mkdir -p /etc/systemd/system
+
+cat > /etc/systemd/system/uclip-backend.service << 'SERVICE'
+[Unit]
+Description=UClip Backend API
+After=network.target
+
+[Service]
+Type=simple
+User=%i
+Group=%i
+WorkingDirectory=/opt/UClip
+ExecStart=/usr/local/bin/uclip-api
+Restart=on-failure
+RestartSec=5
+Environment="PATH=/opt/UClip/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+
+cat > /etc/systemd/system/uclip-listener.service << 'SERVICE'
+[Unit]
+Description=UClip Clipboard Listener
+After=uclip-backend.service
+
+[Service]
+Type=simple
+User=%i
+Group=%i
+WorkingDirectory=/opt/UClip
+ExecStart=/usr/local/bin/uclip-listener
+Restart=on-failure
+RestartSec=5
+Environment="PATH=/opt/UClip/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+
+# Reload systemd daemon
+systemctl daemon-reload 2>/dev/null || true
+
+# Try to start services for all logged in users
+for user_home in /home/*/; do
+    if [ -d "$user_home" ]; then
+        username=$(basename "$user_home")
+        
+        # Create user systemd directory
+        user_systemd_dir="$user_home/.config/systemd/user"
+        mkdir -p "$user_systemd_dir" 2>/dev/null || true
+        chown "$username:$username" "$user_systemd_dir" 2>/dev/null || true
+        
+        # Create symlinks to system services
+        ln -sf /etc/systemd/system/uclip-backend.service "$user_systemd_dir/" 2>/dev/null || true
+        ln -sf /etc/systemd/system/uclip-listener.service "$user_systemd_dir/" 2>/dev/null || true
+        
+        # Reload user systemd
+        su - "$username" -c "systemctl --user daemon-reload" 2>/dev/null || true
+        
+        # Enable and start services
+        su - "$username" -c "systemctl --user enable uclip-backend.service uclip-listener.service" 2>/dev/null || true
+        su - "$username" -c "systemctl --user start uclip-backend.service uclip-listener.service" 2>/dev/null || true
+        
+        echo "[UClip] Serviços iniciados para usuário: $username"
+    fi
+done
+
+echo "[UClip] Backend configurado com sucesso!"
