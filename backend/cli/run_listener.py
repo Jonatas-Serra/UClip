@@ -5,6 +5,11 @@ Uso: python backend/cli/run_listener.py
 import signal
 import time
 import logging
+import sys
+import os
+
+# Add parent directory to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from backend.services.clipboard_listener import ClipboardListener
 
