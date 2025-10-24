@@ -5,6 +5,8 @@
 
 set -e
 
+APP_VERSION="0.1.14"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -125,18 +127,18 @@ print_success "Python environment ready"
 print_info "Step 4/5: Setting up Frontend..."
 
 # Check if AppImage exists in releases
-if [ ! -f "$INSTALL_DIR/frontend/dist/UClip-0.1.0.AppImage" ]; then
+if [ ! -f "$INSTALL_DIR/frontend/dist/UClip-${APP_VERSION}.AppImage" ]; then
     print_info "Downloading AppImage..."
     mkdir -p "$INSTALL_DIR/frontend/dist"
-    wget -q https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.0/UClip-0.1.0.AppImage \
-        -O "$INSTALL_DIR/frontend/dist/UClip-0.1.0.AppImage"
+    wget -q https://github.com/Jonatas-Serra/UClip/releases/download/v${APP_VERSION}/UClip-${APP_VERSION}.AppImage \
+        -O "$INSTALL_DIR/frontend/dist/UClip-${APP_VERSION}.AppImage"
 fi
 
-chmod +x "$INSTALL_DIR/frontend/dist/UClip-0.1.0.AppImage"
+chmod +x "$INSTALL_DIR/frontend/dist/UClip-${APP_VERSION}.AppImage"
 
 # Create symlink in /usr/local/bin
-sudo ln -sf "$INSTALL_DIR/frontend/dist/UClip-0.1.0.AppImage" /usr/local/bin/uclip 2>/dev/null || \
-    mkdir -p ~/.local/bin && ln -sf "$INSTALL_DIR/frontend/dist/UClip-0.1.0.AppImage" ~/.local/bin/uclip
+sudo ln -sf "$INSTALL_DIR/frontend/dist/UClip-${APP_VERSION}.AppImage" /usr/local/bin/uclip 2>/dev/null || \
+    mkdir -p ~/.local/bin && ln -sf "$INSTALL_DIR/frontend/dist/UClip-${APP_VERSION}.AppImage" ~/.local/bin/uclip
 
 print_success "Frontend installed"
 

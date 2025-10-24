@@ -337,4 +337,4 @@ sqlite3 ~/.local/share/uclip/clipboard.db "DELETE FROM clips WHERE created_at < 
 ---
 
 *Última atualização: Outubro 2025*  
-*Versão: 0.1.0*
+*Versão: 0.1.14*

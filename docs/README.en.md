@@ -16,15 +16,18 @@ A fast, lightweight clipboard manager with global hotkey support. Capture, organ
 
 **Option 1: AppImage** (Recommended - No installation)
 ```bash
-wget -O ~/UClip.AppImage https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.0/UClip-0.1.0.AppImage
+VERSION=0.1.14
+wget -O ~/UClip.AppImage https://github.com/Jonatas-Serra/UClip/releases/download/v${VERSION}/UClip-${VERSION}.AppImage
+sudo apt install -y libfuse2
 chmod +x ~/UClip.AppImage
 ~/UClip.AppImage  # run
 ```
 
 **Option 2: DEB Package** (Permanent installation)
 ```bash
-wget https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.0/uclip-frontend_0.1.0_amd64.deb
-sudo dpkg -i uclip-frontend_0.1.0_amd64.deb
+VERSION=0.1.14
+wget https://github.com/Jonatas-Serra/UClip/releases/download/v${VERSION}/UClip-${VERSION}.deb
+sudo apt install -y ./UClip-${VERSION}.deb
 uclip  # run
 ```
 
@@ -67,4 +70,4 @@ bash <(curl -fsSL https://raw.githubusercontent.com/jonatasserra/UClip/main/scri
 
 ---
 
-*Last updated: October 2025 | Version: 0.1.0*
+*Last updated: October 2025 | Version: 0.1.14*

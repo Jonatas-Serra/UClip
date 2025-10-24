@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef } from "react";
-import { listClips } from './api'
+import React, { useEffect, useState, useRef, useMemo } from "react";
+import { listClips, Clip } from './api'
 
 declare global {
   interface Window {
@@ -7,17 +7,34 @@ declare global {
       minimizeAfterCopy: () => void
       rendererLog: (...args: any[]) => void
       rendererError: (...args: any[]) => void
+      minimizeWindow?: () => void
+      closeWindow?: () => void
+      copyImageFromPath?: (imagePath: string) => Promise<{ ok: boolean; error?: string }>
     }
   }
 }
 
 export default function App() {
-  const [clips, setClips] = useState<any[]>([])
+  const [clips, setClips] = useState<Clip[]>([])
+  const [searchTerm, setSearchTerm] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [copied, setCopied] = useState<number | null>(null)
   const selectedRef = useRef<HTMLDivElement>(null)
+
+  const filteredClips = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return clips
+    }
+
+    const term = searchTerm.trim().toLowerCase()
+    return clips.filter((clip) => {
+      const content = String(clip.content ?? "").toLowerCase()
+      const mime = String(clip.mime ?? "").toLowerCase()
+      return content.includes(term) || mime.includes(term)
+    })
+  }, [clips, searchTerm])
 
   async function load() {
     setLoading(true)
@@ -42,32 +59,47 @@ export default function App() {
   // Tratar teclas de seta
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (!clips.length) return
+      if (!filteredClips.length) return
 
       if (e.key === 'ArrowDown') {
         e.preventDefault()
-        setSelectedIndex(prev => prev === null ? 0 : Math.min(prev + 1, clips.length - 1))
+        setSelectedIndex(prev => prev === null ? 0 : Math.min(prev + 1, filteredClips.length - 1))
       } else if (e.key === 'ArrowUp') {
         e.preventDefault()
-        setSelectedIndex(prev => prev === null ? clips.length - 1 : Math.max(prev - 1, 0))
+        setSelectedIndex(prev => prev === null ? filteredClips.length - 1 : Math.max(prev - 1, 0))
       } else if (e.key === 'Enter') {
         e.preventDefault()
         if (selectedIndex !== null) {
-          copyToClipboard(clips[selectedIndex])
+          copyToClipboard(filteredClips[selectedIndex])
         }
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [clips, selectedIndex])
+  }, [filteredClips, selectedIndex])
 
-  // Auto-select primeiro item
+  // Auto-select primeiro item conforme filtro
   useEffect(() => {
-    if (clips.length > 0 && selectedIndex === null) {
+    if (filteredClips.length === 0) {
+      setSelectedIndex(null)
+      return
+    }
+
+    setSelectedIndex(prev => {
+      if (prev === null || prev >= filteredClips.length) {
+        return 0
+      }
+      return prev
+    })
+  }, [filteredClips.length])
+
+  // Sempre voltar ao topo quando buscar
+  useEffect(() => {
+    if (filteredClips.length > 0) {
       setSelectedIndex(0)
     }
-  }, [clips.length])
+  }, [searchTerm])
 
   // Scroll para item selecionado
   useEffect(() => {
@@ -76,14 +108,31 @@ export default function App() {
     }
   }, [selectedIndex])
 
-  async function copyToClipboard(clip: any) {
+  async function copyToClipboard(clip: Clip) {
     try {
       if (clip.mime && clip.mime.startsWith('image')) {
-        await copyImageToClipboard(clip.content)
+        let copiedImage = false
+        const imagePath = clip.file_path ?? null
+
+        if (imagePath && window.electronAPI?.copyImageFromPath) {
+          try {
+            const result = await window.electronAPI.copyImageFromPath(imagePath)
+            copiedImage = !!result?.ok
+            if (!copiedImage && result?.error) {
+              console.error('copyImageFromPath failed:', result.error)
+            }
+          } catch (ipcError) {
+            console.error('copyImageFromPath threw:', ipcError)
+          }
+        }
+
+        if (!copiedImage) {
+          await copyImageToClipboard(clip.content)
+        }
       } else {
         await navigator.clipboard.writeText(clip.content)
       }
-      
+
       setCopied(clip.id)
       
       setTimeout(() => {
@@ -98,15 +147,14 @@ export default function App() {
   }
 
   async function copyImageToClipboard(imageUrl: string) {
-    try {
-      const response = await fetch(imageUrl)
-      const blob = await response.blob()
-      await navigator.clipboard.write([
-        new ClipboardItem({ [blob.type]: blob })
-      ])
-    } catch (e) {
-      await navigator.clipboard.writeText(imageUrl)
+    const response = await fetch(imageUrl)
+    if (!response.ok) {
+      throw new Error(`Falha ao baixar imagem (${response.status})`)
     }
+    const blob = await response.blob()
+    await navigator.clipboard.write([
+      new ClipboardItem({ [blob.type]: blob })
+    ])
   }
 
   const styles = {
@@ -125,6 +173,9 @@ export default function App() {
       userSelect: 'none',
       WebkitUserSelect: 'none',
       WebkitAppRegion: 'drag',
+      display: 'flex',
+      flexDirection: 'column' as const,
+      gap: '6px',
     },
     title: {
       fontSize: '18px',
@@ -154,6 +205,7 @@ export default function App() {
       gap: '8px',
       alignItems: 'center',
       padding: '8px 0',
+      WebkitAppRegion: 'no-drag' as const,
     },
     button: {
       padding: '6px 12px',
@@ -176,6 +228,50 @@ export default function App() {
       fontSize: '11px',
       color: '#888',
       marginLeft: '8px',
+    },
+    headerTop: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: '12px',
+      marginBottom: '6px',
+    },
+    windowControls: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '6px',
+      WebkitAppRegion: 'no-drag' as const,
+    },
+    windowButton: {
+      width: '18px',
+      height: '18px',
+      borderRadius: '50%',
+      border: '1px solid rgba(255,255,255,0.2)',
+      cursor: 'pointer',
+      transition: 'opacity 0.2s ease',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: '10px',
+      lineHeight: 1,
+      color: '#0d0d0d',
+    },
+    searchBox: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      width: '100%',
+      WebkitAppRegion: 'no-drag' as const,
+    },
+    searchInput: {
+      flex: 1,
+      padding: '6px 10px',
+      borderRadius: '6px',
+      border: '1px solid rgba(255, 255, 255, 0.1)',
+      background: 'rgba(0, 0, 0, 0.35)',
+      color: '#f5f5f5',
+      fontSize: '12px',
+      outline: 'none',
     },
     listContainer: {
       flex: 1,
@@ -300,21 +396,61 @@ export default function App() {
       `}</style>
 
       <div style={styles.header as React.CSSProperties} className="window-header">
-        <div style={styles.title as React.CSSProperties}>
-          📋 UClip
+        <div style={styles.headerTop as React.CSSProperties}>
+          <div style={styles.title as React.CSSProperties}>
+            📋 UClip
+          </div>
+          <div style={styles.windowControls as React.CSSProperties}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                window.electronAPI?.minimizeWindow?.()
+              }}
+              style={{
+                ...styles.windowButton,
+                background: '#f6c147',
+              } as React.CSSProperties}
+              title="Minimizar"
+            >
+              –
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                window.electronAPI?.closeWindow?.()
+              }}
+              style={{
+                ...styles.windowButton,
+                background: '#eb5a5a',
+              } as React.CSSProperties}
+              title="Fechar"
+            >
+              ✕
+            </button>
+          </div>
         </div>
         <p style={styles.subtitle as React.CSSProperties}>
           ⬆️ ⬇️ Navegar • Enter Copiar
         </p>
-        
+
         {error && (
           <div style={styles.errorBox as React.CSSProperties}>
             ⚠️ {error}
           </div>
         )}
-        
+
+        <div style={styles.searchBox as React.CSSProperties}>
+          <input
+            type="text"
+            placeholder="Pesquisar clips..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={styles.searchInput as React.CSSProperties}
+          />
+        </div>
+
         <div style={styles.controls as React.CSSProperties}>
-          <button 
+          <button
             onClick={load}
             disabled={loading}
             style={{
@@ -326,23 +462,23 @@ export default function App() {
             {loading ? '⏳' : '🔄'}
           </button>
           <span style={styles.counter as React.CSSProperties}>
-            {clips.length} {clips.length === 1 ? 'clip' : 'clips'}
+            {filteredClips.length} de {clips.length} {clips.length === 1 ? 'clip' : 'clips'}
           </span>
         </div>
       </div>
 
       <div style={styles.listContainer as React.CSSProperties}>
-        {clips.length === 0 && !loading && (
+        {filteredClips.length === 0 && !loading && (
           <div style={styles.emptyState as React.CSSProperties}>
             <div style={{fontSize: '32px', marginBottom: '8px'}}>📭</div>
-            <div>Nenhum clip</div>
+            <div>{searchTerm.trim() ? 'Nenhum resultado' : 'Nenhum clip'}</div>
             <div style={{fontSize: '10px', color: '#555', marginTop: '4px'}}>
-              Copie algo para aparecer aqui
+              {searchTerm.trim() ? 'Tente outro termo ou limpe a busca' : 'Copie algo para aparecer aqui'}
             </div>
           </div>
         )}
-        
-        {clips.map((clip, idx) => (
+
+        {filteredClips.map((clip, idx) => (
           <div
             key={clip.id}
             ref={selectedIndex === idx ? selectedRef : null}

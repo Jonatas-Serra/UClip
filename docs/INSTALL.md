@@ -72,12 +72,14 @@ pip install -r backend/requirements.txt
 
 ```bash
 # download (ou use o que já existe em frontend/dist/)
+VERSION=0.1.14
 cd ~/Downloads  # (ou seu diretório de downloads)
-wget https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.0/UClip-0.1.0.AppImage
+wget https://github.com/Jonatas-Serra/UClip/releases/download/v${VERSION}/UClip-${VERSION}.AppImage
 # ou, se já tiver o arquivo:
-cp /caminho/para/frontend/dist/UClip-0.1.0.AppImage ~/UClip.AppImage
+cp /caminho/para/frontend/dist/UClip-${VERSION}.AppImage ~/UClip.AppImage
 
 # tornar executável
+sudo apt install -y libfuse2  # necessário para Ubuntu/Pop!_OS 22.04+
 chmod +x ~/UClip.AppImage
 ```
 
@@ -360,7 +362,7 @@ journalctl --user -u uclip-backend.service -n 50  # se serviço
 ## 7. Próximos passos (opcional)
 
 - **Customizar atalho**: altere `<Super>v` para qualquer outro (ex.: `<Ctrl><Alt>c`)
-- **Usar .deb**: instale via `sudo dpkg -i uclip-frontend_0.1.0_amd64.deb` (se preferir)
+- **Usar .deb**: instale via `VERSION=0.1.14 && sudo apt install -y ./UClip-${VERSION}.deb` (se preferir)
 - **Relatar bugs**: abra issue no GitHub
 
 ---

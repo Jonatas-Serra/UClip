@@ -4,6 +4,8 @@
 
 set -euo pipefail
 
+APP_VERSION="0.1.14"
+
 echo "==== UClip Installation Script ===="
 echo ""
 
@@ -63,7 +65,7 @@ echo ""
 echo "Step 2: Installing UClip AppImage..."
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
-APPIMAGE_SRC="$PROJECT_ROOT/frontend/dist/UClip-0.1.0.AppImage"
+APPIMAGE_SRC="$PROJECT_ROOT/frontend/dist/UClip-${APP_VERSION}.AppImage"
 
 if [[ ! -f "$APPIMAGE_SRC" ]]; then
   echo "Error: AppImage not found at $APPIMAGE_SRC"
