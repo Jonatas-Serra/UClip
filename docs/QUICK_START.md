@@ -11,14 +11,17 @@
 #### 1. Baixar e executar
 
 ```bash
+VERSION=0.1.14
+
 # Opção A: AppImage (Recomendado)
-wget -O ~/UClip.AppImage https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.0/UClip-0.1.0.AppImage
+wget -O ~/UClip.AppImage https://github.com/Jonatas-Serra/UClip/releases/download/v${VERSION}/UClip-${VERSION}.AppImage
+sudo apt install -y libfuse2
 chmod +x ~/UClip.AppImage
 ~/UClip.AppImage
 
 # Opção B: Pacote DEB
-wget https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.0/uclip-frontend_0.1.0_amd64.deb
-sudo dpkg -i uclip-frontend_0.1.0_amd64.deb && uclip
+wget https://github.com/Jonatas-Serra/UClip/releases/download/v${VERSION}/UClip-${VERSION}.deb
+sudo apt install -y ./UClip-${VERSION}.deb && uclip
 ```
 
 #### 2. Instalar backend
@@ -64,14 +67,17 @@ Pressione **Super+V** (Windows+V) para abrir o UClip 🎉
 #### 1. Download and run
 
 ```bash
+VERSION=0.1.14
+
 # Option A: AppImage (Recommended)
-wget -O ~/UClip.AppImage https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.0/UClip-0.1.0.AppImage
+wget -O ~/UClip.AppImage https://github.com/Jonatas-Serra/UClip/releases/download/v${VERSION}/UClip-${VERSION}.AppImage
+sudo apt install -y libfuse2
 chmod +x ~/UClip.AppImage
 ~/UClip.AppImage
 
 # Option B: DEB Package
-wget https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.0/uclip-frontend_0.1.0_amd64.deb
-sudo dpkg -i uclip-frontend_0.1.0_amd64.deb && uclip
+wget https://github.com/Jonatas-Serra/UClip/releases/download/v${VERSION}/UClip-${VERSION}.deb
+sudo apt install -y ./UClip-${VERSION}.deb && uclip
 ```
 
 #### 2. Install backend
@@ -126,4 +132,4 @@ For more help → [INSTALL.md](INSTALL.md)
 
 ---
 
-*Version: 0.1.0 | October 2025*
+*Version: 0.1.14 | October 2025*

@@ -17,6 +17,7 @@ class ClipOut(BaseModel):
     content: str
     mime: str
     created_at: str
+    file_path: str | None = None
 
 
 def get_session():
@@ -35,12 +36,20 @@ def create_clip(payload: ClipCreate, session=Depends(get_session)):
     session.commit()
     session.refresh(clip)
     content = clip.content
+    file_path = None
     if clip.mime and clip.mime.startswith("image"):
         # convert local path to API URL (absolute URL for Electron frontend)
         import os
         filename = os.path.basename(content)
         content = f"http://127.0.0.1:8001/api/images/{filename}"
-    return ClipOut(id=clip.id, content=content, mime=clip.mime, created_at=str(clip.created_at))
+        file_path = clip.content
+    return ClipOut(
+        id=clip.id,
+        content=content,
+        mime=clip.mime,
+        created_at=str(clip.created_at),
+        file_path=file_path,
+    )
 
 
 @router.get("/", response_model=List[ClipOut])
@@ -50,10 +59,20 @@ def list_clips(limit: int = 50, session=Depends(get_session)):
     import os
     for r in rows:
         content = r.content
+        file_path = None
         if r.mime and r.mime.startswith("image"):
             filename = os.path.basename(r.content)
             content = f"http://127.0.0.1:8001/api/images/{filename}"
-        out.append(ClipOut(id=r.id, content=content, mime=r.mime, created_at=str(r.created_at)))
+            file_path = r.content
+        out.append(
+            ClipOut(
+                id=r.id,
+                content=content,
+                mime=r.mime,
+                created_at=str(r.created_at),
+                file_path=file_path,
+            )
+        )
     return out
 
 
@@ -63,11 +82,19 @@ def get_clip(clip_id: int, session=Depends(get_session)):
     if not clip:
         raise HTTPException(status_code=404, detail="Clip not found")
     content = clip.content
+    file_path = None
     if clip.mime and clip.mime.startswith("image"):
         import os
         filename = os.path.basename(content)
         content = f"http://127.0.0.1:8001/api/images/{filename}"
-    return ClipOut(id=clip.id, content=content, mime=clip.mime, created_at=str(clip.created_at))
+        file_path = clip.content
+    return ClipOut(
+        id=clip.id,
+        content=content,
+        mime=clip.mime,
+        created_at=str(clip.created_at),
+        file_path=file_path,
+    )
 
 
 @router.delete("/{clip_id}")

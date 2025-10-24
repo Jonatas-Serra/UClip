@@ -25,8 +25,9 @@ bash <(curl -fsSL https://raw.githubusercontent.com/Jonatas-Serra/UClip/main/scr
 
 **Instalação em um comando** (recomendado - tudo automático!)
 ```bash
-wget https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.8/UClip-0.1.8.deb
-sudo dpkg -i UClip-0.1.8.deb
+VERSION=0.1.14
+wget https://github.com/Jonatas-Serra/UClip/releases/download/v${VERSION}/UClip-${VERSION}.deb
+sudo apt install -y ./UClip-${VERSION}.deb
 ```
 
 ✅ **É isso! Tudo configurado automaticamente:**
@@ -41,10 +42,13 @@ sudo dpkg -i UClip-0.1.8.deb
 uclip
 ```
 
+> 💡 **Pop!_OS 22.04+**: os comandos acima funcionam normalmente. Certifique-se de ter o pacote `libfuse2` instalado antes de rodar AppImage.
+
 **Opção 2: AppImage** (versão portável, requer backend em separado)
 ```bash
-# Download AppImage
-wget -O ~/UClip.AppImage https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.8/UClip-0.1.8.AppImage
+VERSION=0.1.14
+wget -O ~/UClip.AppImage https://github.com/Jonatas-Serra/UClip/releases/download/v${VERSION}/UClip-${VERSION}.AppImage
+sudo apt install -y libfuse2  # necessário para rodar AppImage em Ubuntu/Pop!_OS recentes
 chmod +x ~/UClip.AppImage
 
 # Para usar AppImage com backend, siga as instruções de desenvolvimento abaixo

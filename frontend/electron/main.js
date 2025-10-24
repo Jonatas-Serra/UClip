@@ -1,4 +1,4 @@
-const { app, BrowserWindow, globalShortcut, Menu, Tray, ipcMain } = require('electron')
+const { app, BrowserWindow, globalShortcut, Menu, Tray, ipcMain, clipboard, nativeImage } = require('electron')
 const path = require('path')
 const fs = require('fs')
 
@@ -241,6 +241,57 @@ app.whenReady().then(async () => {
       } catch (e) {
         console.error('Error minimizing:', e)
       }
+    }
+  })
+
+  ipcMain.on('window-minimize', () => {
+    if (!win) return
+    try {
+      if (win.isMinimized && win.isMinimized()) {
+        win.restore()
+      } else if (win.minimize) {
+        win.minimize()
+      } else {
+        win.hide()
+      }
+    } catch (e) {
+      console.error('Error minimizing window:', e)
+    }
+  })
+
+  ipcMain.on('window-close', () => {
+    if (!win) return
+    try {
+      if (process.platform === 'linux') {
+        win.hide()
+      } else {
+        win.close()
+      }
+    } catch (e) {
+      console.error('Error closing window:', e)
+    }
+  })
+
+  ipcMain.handle('copy-image-from-path', async (_event, imagePath) => {
+    if (!imagePath || typeof imagePath !== 'string') {
+      return { ok: false, error: 'Caminho da imagem ausente' }
+    }
+
+    try {
+      if (!fs.existsSync(imagePath)) {
+        return { ok: false, error: 'Arquivo de imagem não encontrado' }
+      }
+
+      const image = nativeImage.createFromPath(imagePath)
+      if (!image || image.isEmpty()) {
+        return { ok: false, error: 'Imagem inválida ou vazia' }
+      }
+
+      clipboard.writeImage(image)
+      return { ok: true }
+    } catch (err) {
+      console.error('copy-image-from-path error:', err)
+      return { ok: false, error: err && err.message ? err.message : String(err) }
     }
   })
 

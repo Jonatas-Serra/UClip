@@ -10,7 +10,7 @@ from backend.services.database_service import init_db
 from fastapi.staticfiles import StaticFiles
 from backend.services.database_service import ensure_images_dir
 
-app = FastAPI(title="UClip Backend", version="0.1.0")
+app = FastAPI(title="UClip Backend", version="0.1.14")
 
 # Add CORS middleware to allow Electron frontend to access the API
 app.add_middleware(

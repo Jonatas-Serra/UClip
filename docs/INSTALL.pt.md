@@ -45,10 +45,12 @@ Your Computer
 Melhor para: Testar primeiro, sem permissões de root
 
 ```bash
+VERSION=0.1.14
 # Baixar (ou use do seu navegador)
-wget -O ~/UClip.AppImage https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.0/UClip-0.1.0.AppImage
+wget -O ~/UClip.AppImage https://github.com/Jonatas-Serra/UClip/releases/download/v${VERSION}/UClip-${VERSION}.AppImage
 
 # Tornar executável
+sudo apt install -y libfuse2  # necessário para rodar AppImage em Ubuntu/Pop!_OS 22.04+
 chmod +x ~/UClip.AppImage
 
 # Executar
@@ -59,11 +61,12 @@ chmod +x ~/UClip.AppImage
 Melhor para: Uso permanente, acesso pelo menu
 
 ```bash
+VERSION=0.1.14
 # Baixar pacote
-wget https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.0/uclip-frontend_0.1.0_amd64.deb
+wget https://github.com/Jonatas-Serra/UClip/releases/download/v${VERSION}/UClip-${VERSION}.deb
 
 # Instalar
-sudo dpkg -i uclip-frontend_0.1.0_amd64.deb
+sudo apt install -y ./UClip-${VERSION}.deb
 
 # Executar (agora disponível no menu de aplicações)
 uclip
@@ -116,15 +119,18 @@ Pressione **Super+V** (ou Windows+V) para abrir! 🎉
 
 #### Método 1: AppImage
 ```bash
-wget -O ~/UClip.AppImage https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.0/UClip-0.1.0.AppImage
+VERSION=0.1.14
+wget -O ~/UClip.AppImage https://github.com/Jonatas-Serra/UClip/releases/download/v${VERSION}/UClip-${VERSION}.AppImage
+sudo apt install -y libfuse2
 chmod +x ~/UClip.AppImage
 ~/UClip.AppImage
 ```
 
 #### Método 2: .deb (recomendado)
 ```bash
-wget https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.0/uclip-frontend_0.1.0_amd64.deb
-sudo dpkg -i uclip-frontend_0.1.0_amd64.deb
+VERSION=0.1.14
+wget https://github.com/Jonatas-Serra/UClip/releases/download/v${VERSION}/UClip-${VERSION}.deb
+sudo apt install -y ./UClip-${VERSION}.deb
 ```
 
 #### Dependências do Sistema
@@ -143,8 +149,9 @@ echo "deb http://deb.debian.org/debian $(lsb_release -cs)-backports main" | sudo
 sudo apt-get update
 
 # Instale pacote
-wget https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.0/uclip-frontend_0.1.0_amd64.deb
-sudo dpkg -i uclip-frontend_0.1.0_amd64.deb
+VERSION=0.1.14
+wget https://github.com/Jonatas-Serra/UClip/releases/download/v${VERSION}/UClip-${VERSION}.deb
+sudo apt install -y ./UClip-${VERSION}.deb
 
 # Dependências
 sudo apt-get install -y python3 python3-pip python3-venv libfuse2
@@ -159,7 +166,8 @@ sudo apt-get install -y python3 python3-pip python3-venv libfuse2
 sudo dnf install -y python3 python3-pip gcc-c++ libxcb libxcb-devel wl-clipboard
 
 # Use AppImage (recomendado, pois .deb pode não funcionar)
-wget -O ~/UClip.AppImage https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.0/UClip-0.1.0.AppImage
+VERSION=0.1.14
+wget -O ~/UClip.AppImage https://github.com/Jonatas-Serra/UClip/releases/download/v${VERSION}/UClip-${VERSION}.AppImage
 chmod +x ~/UClip.AppImage
 ~/UClip.AppImage
 ```
@@ -170,7 +178,8 @@ chmod +x ~/UClip.AppImage
 
 ```bash
 # Use AppImage ou compile localmente
-wget -O ~/UClip.AppImage https://github.com/Jonatas-Serra/UClip/releases/download/v0.1.0/UClip-0.1.0.AppImage
+VERSION=0.1.14
+wget -O ~/UClip.AppImage https://github.com/Jonatas-Serra/UClip/releases/download/v${VERSION}/UClip-${VERSION}.AppImage
 chmod +x ~/UClip.AppImage
 ~/UClip.AppImage
 
@@ -556,4 +565,4 @@ Agora que tem o UClip instalado:
 ---
 
 *Última atualização: Outubro 2025*  
-*Versão: 0.1.0*
+*Versão: 0.1.14*
