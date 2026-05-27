@@ -25,7 +25,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/Jonatas-Serra/UClip/main/scr
 
 **Instalação em um comando** (recomendado - tudo automático!)
 ```bash
-VERSION=0.1.14
+VERSION=0.2.0
 wget https://github.com/Jonatas-Serra/UClip/releases/download/v${VERSION}/UClip-${VERSION}.deb
 sudo apt install -y ./UClip-${VERSION}.deb
 ```
@@ -46,7 +46,7 @@ uclip
 
 **Opção 2: AppImage** (versão portável, requer backend em separado)
 ```bash
-VERSION=0.1.14
+VERSION=0.2.0
 wget -O ~/UClip.AppImage https://github.com/Jonatas-Serra/UClip/releases/download/v${VERSION}/UClip-${VERSION}.AppImage
 sudo apt install -y libfuse2  # necessário para rodar AppImage em Ubuntu/Pop!_OS recentes
 chmod +x ~/UClip.AppImage
@@ -284,4 +284,4 @@ Quer contribuir? Abra uma [issue](https://github.com/Jonatas-Serra/UClip/issues)
 ---
 
 *Última atualização: Outubro 2025*  
-*Version: 0.1.0*
+*Version: 0.2.0*

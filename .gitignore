@@ -20,3 +20,12 @@ images/
 
 # OS
 .DS_Store
+
+# Virtualenv (added — pre-existing commit accidentally tracked .venv contents)
+.venv/
+
+# Logs gerados em runtime
+*.log
+
+# Build/test caches
+*.tsbuildinfo

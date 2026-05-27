@@ -3,7 +3,19 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data: http://127.0.0.1:8001; img-src 'self' http://127.0.0.1:8001 data: blob:; connect-src 'self' http://127.0.0.1:8001; font-src 'self' data:;" />
     <title>UClip</title>
+    <style>
+      /* Inter via system load + fallback fonts (sem Google Fonts pra funcionar offline) */
+      @font-face {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 100 900;
+        font-display: swap;
+        src: local('Inter'), local('Inter-Variable');
+      }
+      html, body { background: transparent; }
+    </style>
   </head>
   <body>
     <div id="root"></div>

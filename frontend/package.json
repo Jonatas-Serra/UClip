@@ -1,9 +1,9 @@
 {
   "name": "uclip-frontend",
-  "version": "0.1.14",
+  "version": "0.2.0",
   "private": true,
   "main": "electron/main.js",
-  "description": "UClip - Ubuntu clipboard manager (frontend)",
+  "description": "UClip - clipboard manager moderno para Linux (frontend)",
   "author": "Jonatas Serra <jonatasserra@outlook.com>",
   "homepage": "https://github.com/Jonatas-Serra/UClip",
   "scripts": {
@@ -16,7 +16,8 @@
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-i18next": "^12.2.0"
+    "react-i18next": "^12.2.0",
+    "i18next": "^23.7.0"
   },
   "devDependencies": {
     "typescript": "^5.5.0",
@@ -31,20 +32,38 @@
   "build": {
     "appId": "com.uclip.app",
     "productName": "UClip",
-    "files": ["app/**/*", "electron/**/*", "package.json"],
-    "asar": false,
+    "files": [
+      "app/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "app/backend/**/*",
+      "app/assets/**/*"
+    ],
     "directories": {
       "buildResources": "buildResources",
       "output": "dist"
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "category": "Utility",
       "icon": "buildResources/icon-512x512.png",
       "executableName": "uclip"
     },
     "deb": {
-      "depends": ["libxss1", "python3", "python3-pip", "python3-venv", "xclip", "wl-clipboard"],
+      "depends": [
+        "libxss1",
+        "python3",
+        "python3-pip",
+        "python3-venv",
+        "xclip",
+        "wl-clipboard"
+      ],
       "category": "Utility",
       "packageName": "uclip",
       "artifactName": "UClip-${version}.deb",
