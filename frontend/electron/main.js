@@ -70,6 +70,7 @@ async function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
+      spellcheck: false,
       preload: path.join(__dirname, 'preload.js'),
     },
   })
