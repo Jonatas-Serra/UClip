@@ -1,27 +1,59 @@
 name: Release
 
+# Release end-to-end disparada pela UI do GitHub Actions.
+# Fluxo:  validate input → checkout main → backend tests → frontend typecheck
+#         → bump versão → regenera lockfile → build .deb/AppImage → checksum
+#         → SE TUDO OK: commit + push main + tag + push tag → publica GitHub Release
+#
+# Decisões:
+# - Único workflow_dispatch (sem 'push: tags' separado) pra evitar o gotcha
+#   do GITHUB_TOKEN, que não dispara workflows derivados.
+# - "Lock-in tardio": só commita o bump e cria a tag DEPOIS de o build passar.
+#   Se algo quebrar, main fica intacto e a tag não nasce.
+# - Lockfile é regenerado em cada release pra evitar drift entre package.json
+#   e package-lock.json após o bump.
+
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versão da release (formato X.Y.Z, sem o "v")'
+        required: true
+        type: string
 
 permissions:
   contents: write
 
 jobs:
-  # Gate: testes têm de passar antes de empacotar
-  test:
-    uses: ./.github/workflows/ci.yml
-
-  build-and-release:
-    name: Build and Release
-    needs: test
+  release:
+    name: Bump, test, build & publish
     runs-on: ubuntu-latest
     steps:
+      # ───────────────── Validation ─────────────────
+      - name: Validate version format
+        run: |
+          V="${{ inputs.version }}"
+          if ! [[ $V =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Versão inválida: '$V' (esperado X.Y.Z, sem o prefixo 'v')"
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # necessário para gerar changelog a partir de git log
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Ensure tag does not already exist
+        run: |
+          TAG="v${{ inputs.version }}"
+          git fetch --tags
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "❌ Tag $TAG já existe. Use outra versão ou apague a tag antes."
+            exit 1
+          fi
+
+      # ───────────────── Setup ─────────────────
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -34,30 +66,38 @@ jobs:
         with:
           python-version: '3.12'
 
-      # Extrai versão e valida bate com package.json (proteção contra esquecer bump)
-      - name: Extract & verify version
-        id: version
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/}
-          VERSION_NUMBER=${VERSION#v}
-          PKG_VERSION=$(node -p "require('./frontend/package.json').version")
-          if [ "$PKG_VERSION" != "$VERSION_NUMBER" ]; then
-            echo "❌ Tag ($VERSION_NUMBER) != package.json ($PKG_VERSION). Use scripts/bump_version.py antes da tag."
-            exit 1
-          fi
-          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
-          echo "VERSION_NUMBER=${VERSION_NUMBER}" >> $GITHUB_OUTPUT
-
-      - name: Clean development data
-        run: bash scripts/clean_dev_data.sh || true
-
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libxss1 fakeroot dpkg python3 python3-pip python3-venv xclip wl-clipboard
+          sudo apt-get install -y libxss1 fakeroot dpkg python3-venv xclip wl-clipboard
 
-      - name: Install frontend dependencies
+      # ───────────────── Test gate ─────────────────
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r backend/requirements.txt
+
+      - name: Run backend tests
+        run: |
+          export PYTHONPATH="$(pwd)"
+          pytest -v backend/tests --tb=short
+
+      - name: Install frontend deps
         run: cd frontend && npm ci
+
+      - name: TypeScript check
+        run: cd frontend && npx tsc --noEmit
+
+      # ───────────────── Bump ─────────────────
+      - name: Bump version files
+        run: python3 scripts/bump_version.py "${{ inputs.version }}"
+
+      - name: Regenerate package-lock.json after bump
+        run: cd frontend && npm install --package-lock-only --no-audit --no-fund
+
+      # ───────────────── Build ─────────────────
+      - name: Clean dev data
+        run: bash scripts/clean_dev_data.sh || true
 
       - name: Build frontend
         run: cd frontend && npm run build
@@ -65,7 +105,7 @@ jobs:
       - name: Prepare app for packaging
         run: cd frontend && npm run prepack
 
-      - name: Build AppImage and DEB
+      - name: Build .deb + AppImage
         run: cd frontend && npx electron-builder --linux deb AppImage --publish never
         env:
           SKIP_NOTARIZATION: true
@@ -73,7 +113,7 @@ jobs:
       - name: Rename build artifacts
         run: |
           cd frontend/dist
-          V=${{ steps.version.outputs.VERSION_NUMBER }}
+          V="${{ inputs.version }}"
           for f in uclip-frontend_*.deb; do [ -f "$f" ] && mv "$f" "UClip-${V}.deb"; done
           for f in uclip-frontend-*.AppImage; do [ -f "$f" ] && mv "$f" "UClip-${V}.AppImage"; done
           ls -lah UClip-*
@@ -84,28 +124,52 @@ jobs:
           sha256sum UClip-*.deb UClip-*.AppImage > SHA256SUMS
           cat SHA256SUMS
 
-      # Gera changelog a partir dos commits entre a tag anterior e a atual
+      # ───────────────── Lock-in: commit + tag + push ─────────────────
+      - name: Configure git author
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit bump and push main
+        run: |
+          V="${{ inputs.version }}"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: bump version to ${V}"
+            git push origin main
+          else
+            echo "Nada a comitar — arquivos de versão já estavam em ${V}."
+          fi
+
+      - name: Create and push tag
+        run: |
+          TAG="v${{ inputs.version }}"
+          git tag -a "$TAG" -m "Release ${{ inputs.version }}"
+          git push origin "$TAG"
+
+      # ───────────────── Changelog ─────────────────
       - name: Generate changelog
         id: changelog
         run: |
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          TAG="v${{ inputs.version }}"
+          PREV_TAG=$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || echo "")
           if [ -z "$PREV_TAG" ]; then
             LOG=$(git log --pretty=format:"- %s (%h)" --no-merges -50)
           else
-            LOG=$(git log --pretty=format:"- %s (%h)" --no-merges "$PREV_TAG"..HEAD)
+            LOG=$(git log --pretty=format:"- %s (%h)" --no-merges "$PREV_TAG".."$TAG")
           fi
-          # exporta multi-line para o output do GitHub
           {
             echo "changelog<<EOF_CHANGELOG"
             echo "$LOG"
             echo "EOF_CHANGELOG"
           } >> "$GITHUB_OUTPUT"
 
+      # ───────────────── Publish ─────────────────
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.VERSION }}
-          name: UClip ${{ steps.version.outputs.VERSION }}
+          tag_name: v${{ inputs.version }}
+          name: UClip v${{ inputs.version }}
           draft: false
           prerelease: false
           generate_release_notes: false
@@ -114,13 +178,13 @@ jobs:
             frontend/dist/UClip-*.deb
             frontend/dist/SHA256SUMS
           body: |
-            ## 📦 UClip ${{ steps.version.outputs.VERSION }}
+            ## 📦 UClip v${{ inputs.version }}
 
             ### 📥 Instalação rápida (Ubuntu/Debian)
 
             ```bash
-            V=${{ steps.version.outputs.VERSION_NUMBER }}
-            wget https://github.com/Jonatas-Serra/UClip/releases/download/${{ steps.version.outputs.VERSION }}/UClip-${V}.deb
+            V=${{ inputs.version }}
+            wget https://github.com/Jonatas-Serra/UClip/releases/download/v${V}/UClip-${V}.deb
             sudo apt install -y ./UClip-${V}.deb
             ```
 
@@ -141,12 +205,24 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload artifacts (debugging)
+      - name: Upload debug artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: release-artifacts-${{ steps.version.outputs.VERSION }}
+          name: release-artifacts-v${{ inputs.version }}
           path: |
             frontend/dist/*.AppImage
             frontend/dist/*.deb
             frontend/dist/SHA256SUMS
           retention-days: 30
+
+      - name: Summary
+        if: always()
+        run: |
+          V="${{ inputs.version }}"
+          {
+            echo "## 🚀 Release v${V}"
+            echo ""
+            echo "- Tag: \`v${V}\`"
+            echo "- Release: [v${V}](https://github.com/${{ github.repository }}/releases/tag/v${V})"
+            echo "- Assets: \`UClip-${V}.deb\`, \`UClip-${V}.AppImage\`, \`SHA256SUMS\`"
+          } >> "$GITHUB_STEP_SUMMARY"
