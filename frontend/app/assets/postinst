@@ -1,230 +1,192 @@
 #!/bin/bash
-
-# UClip DEB Post-installation Script
-# Executed automatically by dpkg after package installation
+# UClip — DEB post-installation
+# - Cria wrappers /usr/local/bin/uclip-api e /usr/local/bin/uclip-listener
+# - Cria systemd USER services (não system) — rodam na sessão gráfica do usuário
+# - Registra atalho Super+V via gsettings (GNOME) ou swaymsg (Sway)
 
 set -e
 
 INSTALL_DIR="/opt/UClip"
-# Tentar encontrar backend em três locais possíveis
-BACKEND_DIR=""
-if [ -d "$INSTALL_DIR/resources/app/app/backend" ]; then
-    BACKEND_DIR="$INSTALL_DIR/resources/app/app/backend"
-elif [ -d "$INSTALL_DIR/app/backend" ]; then
-    BACKEND_DIR="$INSTALL_DIR/app/backend"
-elif [ -d "$INSTALL_DIR/backend" ]; then
-    BACKEND_DIR="$INSTALL_DIR/backend"
-fi
-
 VENV_DIR="$INSTALL_DIR/.venv"
 
-echo "[UClip] Configurando backend..."
-echo "[UClip] Diretório de instalação: $INSTALL_DIR"
-echo "[UClip] Diretório do backend: $BACKEND_DIR"
+# Locate backend (varies depending on packaging)
+BACKEND_DIR=""
+for candidate in \
+    "$INSTALL_DIR/resources/app/app/backend" \
+    "$INSTALL_DIR/app/backend" \
+    "$INSTALL_DIR/backend"; do
+    if [ -d "$candidate" ]; then
+        BACKEND_DIR="$candidate"
+        break
+    fi
+done
 
-# Check if Python 3 is installed
+echo "[UClip] Diretório de instalação: $INSTALL_DIR"
+echo "[UClip] Backend localizado em:   $BACKEND_DIR"
+
+# --- Dependências Python ----------------------------------------------------
 if ! command -v python3 &> /dev/null; then
     echo "[UClip] Instalando Python 3..."
     apt-get update || true
     apt-get install -y python3 python3-pip python3-venv xclip wl-clipboard || true
 fi
 
-# Verificar se Python 3 foi instalado com sucesso
 if ! command -v python3 &> /dev/null; then
     echo "[UClip] ❌ Erro: Python 3 não foi instalado"
     exit 1
 fi
 
-# Create virtual environment if not exists
+# venv
 if [ ! -d "$VENV_DIR" ]; then
-    echo "[UClip] Criando ambiente virtual Python..."
-    python3 -m venv "$VENV_DIR" || {
-        echo "[UClip] ❌ Erro ao criar ambiente virtual"
-        exit 1
-    }
+    echo "[UClip] Criando virtualenv Python..."
+    python3 -m venv "$VENV_DIR" || { echo "[UClip] ❌ Erro ao criar venv"; exit 1; }
 fi
 
-# Install backend dependencies
 if [ -f "$BACKEND_DIR/requirements.txt" ]; then
-    echo "[UClip] Instalando dependências do backend..."
-    "$VENV_DIR/bin/pip" install --upgrade pip || {
-        echo "[UClip] ⚠️  Aviso: Erro ao atualizar pip"
-    }
+    echo "[UClip] Instalando dependências Python..."
+    "$VENV_DIR/bin/pip" install --upgrade pip wheel >/dev/null 2>&1 || true
     "$VENV_DIR/bin/pip" install -r "$BACKEND_DIR/requirements.txt" || {
-        echo "[UClip] ❌ Erro ao instalar dependências do backend"
+        echo "[UClip] ❌ Erro ao instalar dependências"
         exit 1
     }
-else
-    echo "[UClip] ⚠️  Aviso: requirements.txt não encontrado em $BACKEND_DIR"
 fi
 
-# Fix database permissions to allow users to write
-echo "[UClip] Corrigindo permissões do banco de dados..."
-if [ -f "$INSTALL_DIR/resources/app/app/uclip.db" ]; then
-    chmod 666 "$INSTALL_DIR/resources/app/app/uclip.db" || true
-    chmod 777 "$INSTALL_DIR/resources/app/app" || true
-fi
-
-# Create wrapper scripts
+# --- Wrappers ---------------------------------------------------------------
 mkdir -p /usr/local/bin
 
-cat > /usr/local/bin/uclip-api << 'SCRIPT'
+# Determina o subdiretório que contém o pacote backend para o cd
+BACKEND_PARENT_DIR=$(dirname "$BACKEND_DIR")
+
+cat > /usr/local/bin/uclip-api << SCRIPT
 #!/bin/bash
-cd /opt/UClip
-
-# Encontrar o backend em locais possíveis
-if [ -d "resources/app/app/backend" ]; then
-    cd resources/app/app
-elif [ -d "app/backend" ]; then
-    cd app
-fi
-
-# Ativar virtual environment e executar
-source /opt/UClip/.venv/bin/activate
-exec python3 backend/cli/run_api.py
+cd "$BACKEND_PARENT_DIR"
+source "$VENV_DIR/bin/activate"
+exec python3 -m backend.cli.run_api
 SCRIPT
 chmod +x /usr/local/bin/uclip-api
 
-cat > /usr/local/bin/uclip-listener << 'SCRIPT'
+cat > /usr/local/bin/uclip-listener << SCRIPT
 #!/bin/bash
-cd /opt/UClip
-
-# Encontrar o backend em locais possíveis
-if [ -d "resources/app/app/backend" ]; then
-    cd resources/app/app
-elif [ -d "app/backend" ]; then
-    cd app
-fi
-
-# Ativar virtual environment e executar
-source /opt/UClip/.venv/bin/activate
-exec python3 backend/cli/run_listener.py
+cd "$BACKEND_PARENT_DIR"
+source "$VENV_DIR/bin/activate"
+exec python3 -m backend.cli.run_listener
 SCRIPT
 chmod +x /usr/local/bin/uclip-listener
 
-# Create symlink for the Electron app
-ln -sf /opt/UClip/uclip /usr/local/bin/uclip || true
+# Symlink do binário Electron para /usr/local/bin/uclip caso ainda não exista
+[ -x "$INSTALL_DIR/uclip" ] && ln -sf "$INSTALL_DIR/uclip" /usr/local/bin/uclip || true
 
-# Ensure SUID sandbox helper is correctly configured so Electron can run the sandbox
+# --- Permissões do sandbox do Chromium --------------------------------------
 if [ -f "$INSTALL_DIR/chrome-sandbox" ]; then
-    echo "[UClip] Fixing chrome-sandbox ownership and permissions..."
-    chown root:root "$INSTALL_DIR/chrome-sandbox" || true
-    chmod 4755 "$INSTALL_DIR/chrome-sandbox" || true
+    chown root:root "$INSTALL_DIR/chrome-sandbox"
+    chmod 4755 "$INSTALL_DIR/chrome-sandbox"
 fi
-
-# Also ensure crashpad handler is executable by root if present
 if [ -f "$INSTALL_DIR/chrome_crashpad_handler" ]; then
-    chown root:root "$INSTALL_DIR/chrome_crashpad_handler" || true
-    chmod 4755 "$INSTALL_DIR/chrome_crashpad_handler" || true
+    chown root:root "$INSTALL_DIR/chrome_crashpad_handler"
+    chmod 4755 "$INSTALL_DIR/chrome_crashpad_handler"
 fi
 
-# Create systemd system services (not user services)
-mkdir -p /etc/systemd/system
+# --- USER systemd services + GNOME hotkey por usuário -----------------------
+configure_user() {
+    local username=$1
+    local user_home=$2
+    local user_id
+    user_id=$(id -u "$username" 2>/dev/null) || return 0
 
-cat > /etc/systemd/system/uclip-backend.service << 'SERVICE'
+    local user_systemd_dir="$user_home/.config/systemd/user"
+    mkdir -p "$user_systemd_dir"
+
+    cat > "$user_systemd_dir/uclip-backend.service" << UNIT
 [Unit]
 Description=UClip Backend API
-After=network.target
+After=graphical-session.target
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/UClip
 ExecStart=/usr/local/bin/uclip-api
 Restart=on-failure
 RestartSec=5
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=uclip-backend
-Environment="PATH=/opt/UClip/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-Environment="PYTHONUNBUFFERED=1"
+Environment=PYTHONUNBUFFERED=1
 
 [Install]
-WantedBy=multi-user.target
-SERVICE
+WantedBy=default.target
+UNIT
 
-cat > /etc/systemd/system/uclip-listener.service << 'SERVICE'
+    cat > "$user_systemd_dir/uclip-listener.service" << UNIT
 [Unit]
 Description=UClip Clipboard Listener
-After=network.target uclip-backend.service
+After=graphical-session.target uclip-backend.service
+PartOf=graphical-session.target
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/UClip
 ExecStart=/usr/local/bin/uclip-listener
 Restart=on-failure
 RestartSec=5
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=uclip-listener
-Environment="PATH=/opt/UClip/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-Environment="PYTHONUNBUFFERED=1"
+Environment=PYTHONUNBUFFERED=1
 
 [Install]
-WantedBy=multi-user.target
-SERVICE
+WantedBy=default.target
+UNIT
 
-# Reload systemd daemon
-echo "[UClip] Recarregando daemon do systemd..."
-systemctl daemon-reload
+    chown -R "$username:$username" "$user_home/.config/systemd"
 
-# Enable and start services
-echo "[UClip] Habilitando e iniciando serviços..."
-systemctl enable uclip-backend.service || {
-    echo "[UClip] ⚠️  Erro ao habilitar uclip-backend.service"
-}
-systemctl enable uclip-listener.service || {
-    echo "[UClip] ⚠️  Erro ao habilitar uclip-listener.service"
-}
+    # Daemon-reload e enable+start como o usuário
+    local user_env="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$user_id/bus XDG_RUNTIME_DIR=/run/user/$user_id"
+    sudo -u "$username" env $user_env systemctl --user daemon-reload 2>/dev/null || true
+    sudo -u "$username" env $user_env systemctl --user enable uclip-backend.service uclip-listener.service 2>/dev/null || true
+    # Tenta startar (só funciona se há sessão ativa; senão, sobe no próximo login)
+    sudo -u "$username" env $user_env systemctl --user start uclip-backend.service uclip-listener.service 2>/dev/null || true
 
-# Try to start services
-systemctl start uclip-backend.service || {
-    echo "[UClip] ⚠️  Erro ao iniciar uclip-backend.service (será iniciado no próximo boot)"
-}
+    # Atalho Super+V via gsettings (GNOME). Idempotente.
+    sudo -u "$username" env $user_env bash << 'GSETTINGS'
+if ! command -v gsettings >/dev/null 2>&1; then
+    exit 0
+fi
 
-# Wait a bit for the backend to start before starting the listener
-sleep 2
+SCHEMA="org.gnome.settings-daemon.plugins.media-keys"
+PATH_BASE="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings"
+NEW_PATH="$PATH_BASE/uclip/"
+SCHEMA_CB="$SCHEMA.custom-keybinding:$NEW_PATH"
 
-systemctl start uclip-listener.service || {
-    echo "[UClip] ⚠️  Erro ao iniciar uclip-listener.service (será iniciado no próximo boot)"
-}
+CURRENT=$(gsettings get "$SCHEMA" custom-keybindings 2>/dev/null || echo "@as []")
 
-echo "[UClip] Backend configurado com sucesso!"
-echo "[UClip] Para verificar o status dos serviços execute:"
-echo "[UClip]   systemctl status uclip-backend.service"
-echo "[UClip]   systemctl status uclip-listener.service"
-
-# Call setup-autostart.sh for each user to configure desktop autostart
-echo "[UClip] Configurando autostart para usuários..."
-for user_home in /home/*/; do
-    if [ -d "$user_home" ]; then
-        username=$(basename "$user_home")
-        echo "[UClip] Configurando autostart para usuário: $username"
-        
-        # Create autostart directory for user
-        mkdir -p "$user_home/.config/autostart"
-        chown "$username:$username" "$user_home/.config/autostart"
-        
-        # Create .desktop file for listener
-    cat > "$user_home/.config/autostart/uclip-listener.desktop" << 'DESKTOP'
-[Desktop Entry]
-Type=Application
-Name=UClip Clipboard Listener
-Comment=UClip Clipboard Listener
-Exec=/usr/local/bin/uclip-listener
-Icon=uclip
-Categories=Utility;
-# Ensure the autostart entry is visible to the session and enabled so the listener
-# starts in the user's graphical session (needed for clipboard access on X11/Wayland)
-Hidden=false
-NoDisplay=false
-X-GNOME-Autostart-enabled=true
-DESKTOP
-        
-        chown "$username:$username" "$user_home/.config/autostart/uclip-listener.desktop"
-        
-        echo "[UClip] ✓ Autostart configurado para $username"
+# Adiciona o path do UClip à lista, se ainda não estiver lá
+if ! echo "$CURRENT" | grep -q "uclip"; then
+    if [ "$CURRENT" = "@as []" ] || [ "$CURRENT" = "[]" ]; then
+        NEW="['$NEW_PATH']"
+    else
+        # remove o "]" final e insere a entrada
+        NEW="${CURRENT%]}, '$NEW_PATH']"
     fi
+    gsettings set "$SCHEMA" custom-keybindings "$NEW" 2>/dev/null || true
+fi
+
+gsettings set "$SCHEMA_CB" name 'UClip Toggle' 2>/dev/null || true
+gsettings set "$SCHEMA_CB" command '/usr/local/bin/uclip --toggle' 2>/dev/null || true
+gsettings set "$SCHEMA_CB" binding '<Super>v' 2>/dev/null || true
+GSETTINGS
+
+    echo "[UClip] ✓ Configurado para: $username"
+}
+
+echo "[UClip] Configurando user services e atalho para cada usuário..."
+for user_home in /home/*/; do
+    [ -d "$user_home" ] || continue
+    username=$(basename "$user_home")
+    # Pula usuários sem login válido
+    if ! id "$username" >/dev/null 2>&1; then continue; fi
+    configure_user "$username" "$user_home"
 done
 
-echo "[UClip] ✅ Configuração concluída!"
-echo "[UClip] ℹ️  O listener será iniciado automaticamente quando você fizer login na sessão gráfica"
+echo ""
+echo "[UClip] ✅ Instalação concluída!"
+echo ""
+echo "    • Histórico: pressione  Super+V"
+echo "    • Tray icon: 📋 na bandeja do sistema"
+echo "    • CLI:       uclip [--toggle]"
+echo ""
+echo "[UClip] Status dos serviços (rode como seu usuário):"
+echo "    systemctl --user status uclip-backend.service"
+echo "    systemctl --user status uclip-listener.service"
+echo ""
