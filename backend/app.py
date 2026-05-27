@@ -1,18 +1,13 @@
-"""UClip backend - FastAPI scaffold
-
-Roda um servidor FastAPI mínimo com um endpoint de saúde.
-"""
+"""UClip backend — FastAPI app entrypoint."""
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from backend.api.clip import router as clip_router
-from backend.services.database_service import init_db
-from fastapi.staticfiles import StaticFiles
-from backend.services.database_service import ensure_images_dir
+from backend.services.database_service import init_db, ensure_images_dir
 
-app = FastAPI(title="UClip Backend", version="0.1.14")
+app = FastAPI(title="UClip Backend", version="0.2.0")
 
-# Add CORS middleware to allow Electron frontend to access the API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -24,13 +19,12 @@ app.add_middleware(
 
 @app.on_event("startup")
 def on_startup():
-    # initialize DB (creates tables)
     init_db()
 
 
 @app.get("/")
 async def root():
-    return {"status": "ok", "message": "UClip backend running"}
+    return {"status": "ok", "service": "uclip-backend"}
 
 
 @app.get("/health")
@@ -40,6 +34,6 @@ async def health():
 
 app.include_router(clip_router, prefix="/api")
 
-# Serve images saved by the listener
-images_dir = ensure_images_dir()
-app.mount("/api/images", StaticFiles(directory=images_dir), name="images")
+# Static mount p/ imagens — usa o mesmo diretório que o listener usa.
+# ensure_images_dir() respeita UCLIP_DATA_DIR para casos especiais.
+app.mount("/api/images", StaticFiles(directory=ensure_images_dir()), name="images")

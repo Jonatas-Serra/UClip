@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo } from "react";
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { listClips, Clip } from './api'
 
 declare global {
@@ -14,29 +14,108 @@ declare global {
   }
 }
 
+// ----------------------------- icons -----------------------------
+// SVGs inline para manter zero dependências adicionais.
+
+const Icon = {
+  Search: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m21 21-4.3-4.3" />
+    </svg>
+  ),
+  Refresh: () => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+      <path d="M21 3v5h-5" />
+      <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+      <path d="M3 21v-5h5" />
+    </svg>
+  ),
+  Minimize: () => (
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14" /></svg>
+  ),
+  Close: () => (
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+  ),
+  Copy: () => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect width="14" height="14" x="8" y="8" rx="2" />
+      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+    </svg>
+  ),
+  Check: () => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+  ),
+  TextIcon: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 7V4h18v3" />
+      <path d="M9 20h6" />
+      <path d="M12 4v16" />
+    </svg>
+  ),
+  ImageIcon: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect width="18" height="18" x="3" y="3" rx="2" />
+      <circle cx="9" cy="9" r="2" />
+      <path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21" />
+    </svg>
+  ),
+  Inbox: () => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
+      <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+    </svg>
+  ),
+  Brand: () => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'relative', zIndex: 1 }}>
+      <rect width="14" height="14" x="8" y="8" rx="2" />
+      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+    </svg>
+  ),
+}
+
+// ----------------------------- helpers -----------------------------
+
+function relativeTime(iso: string): string {
+  const date = new Date(iso)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const sec = Math.floor(diffMs / 1000)
+  if (sec < 60) return 'agora'
+  const min = Math.floor(sec / 60)
+  if (min < 60) return `${min}m`
+  const hr = Math.floor(min / 60)
+  if (hr < 24) return `${hr}h`
+  const day = Math.floor(hr / 24)
+  if (day < 7) return `${day}d`
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+}
+
+// ----------------------------- main component -----------------------------
+
 export default function App() {
   const [clips, setClips] = useState<Clip[]>([])
-  const [searchTerm, setSearchTerm] = useState("")
+  const [searchTerm, setSearchTerm] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [copied, setCopied] = useState<number | null>(null)
+  const [imageErrors, setImageErrors] = useState<Set<number>>(new Set())
   const selectedRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   const filteredClips = useMemo(() => {
-    if (!searchTerm.trim()) {
-      return clips
-    }
-
+    if (!searchTerm.trim()) return clips
     const term = searchTerm.trim().toLowerCase()
     return clips.filter((clip) => {
-      const content = String(clip.content ?? "").toLowerCase()
-      const mime = String(clip.mime ?? "").toLowerCase()
+      const content = String(clip.content ?? '').toLowerCase()
+      const mime = String(clip.mime ?? '').toLowerCase()
       return content.includes(term) || mime.includes(term)
     })
   }, [clips, searchTerm])
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
@@ -44,29 +123,41 @@ export default function App() {
       setClips(data)
     } catch (e: any) {
       const errMsg = e?.message || String(e) || 'Unknown error'
-      setError(`Erro ao carregar: ${errMsg}`)
+      setError(`Backend indisponível: ${errMsg}`)
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     load()
     const interval = setInterval(load, 2000)
     return () => clearInterval(interval)
+  }, [load])
+
+  // Foco no search ao abrir
+  useEffect(() => {
+    searchInputRef.current?.focus()
   }, [])
 
-  // Tratar teclas de seta
+  // Setas, Enter, Esc
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        if (searchTerm) {
+          setSearchTerm('')
+        } else {
+          window.electronAPI?.closeWindow?.()
+        }
+        return
+      }
       if (!filteredClips.length) return
-
       if (e.key === 'ArrowDown') {
         e.preventDefault()
-        setSelectedIndex(prev => prev === null ? 0 : Math.min(prev + 1, filteredClips.length - 1))
+        setSelectedIndex((prev) => (prev === null ? 0 : Math.min(prev + 1, filteredClips.length - 1)))
       } else if (e.key === 'ArrowUp') {
         e.preventDefault()
-        setSelectedIndex(prev => prev === null ? filteredClips.length - 1 : Math.max(prev - 1, 0))
+        setSelectedIndex((prev) => (prev === null ? filteredClips.length - 1 : Math.max(prev - 1, 0)))
       } else if (e.key === 'Enter') {
         e.preventDefault()
         if (selectedIndex !== null) {
@@ -74,34 +165,27 @@ export default function App() {
         }
       }
     }
-
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [filteredClips, selectedIndex])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredClips, selectedIndex, searchTerm])
 
-  // Auto-select primeiro item conforme filtro
   useEffect(() => {
     if (filteredClips.length === 0) {
       setSelectedIndex(null)
       return
     }
-
-    setSelectedIndex(prev => {
-      if (prev === null || prev >= filteredClips.length) {
-        return 0
-      }
+    setSelectedIndex((prev) => {
+      if (prev === null || prev >= filteredClips.length) return 0
       return prev
     })
   }, [filteredClips.length])
 
-  // Sempre voltar ao topo quando buscar
   useEffect(() => {
-    if (filteredClips.length > 0) {
-      setSelectedIndex(0)
-    }
+    if (filteredClips.length > 0) setSelectedIndex(0)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm])
 
-  // Scroll para item selecionado
   useEffect(() => {
     if (selectedRef.current) {
       selectedRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
@@ -113,421 +197,204 @@ export default function App() {
       if (clip.mime && clip.mime.startsWith('image')) {
         let copiedImage = false
         const imagePath = clip.file_path ?? null
-
         if (imagePath && window.electronAPI?.copyImageFromPath) {
           try {
             const result = await window.electronAPI.copyImageFromPath(imagePath)
             copiedImage = !!result?.ok
-            if (!copiedImage && result?.error) {
-              console.error('copyImageFromPath failed:', result.error)
-            }
           } catch (ipcError) {
             console.error('copyImageFromPath threw:', ipcError)
           }
         }
-
         if (!copiedImage) {
-          await copyImageToClipboard(clip.content)
+          await copyImageViaFetch(clip.content)
         }
       } else {
         await navigator.clipboard.writeText(clip.content)
       }
-
       setCopied(clip.id)
-      
-      setTimeout(() => {
-        if (window.electronAPI?.minimizeAfterCopy) {
-          window.electronAPI.minimizeAfterCopy()
-        }
-      }, 1000)
+      setTimeout(() => setCopied(null), 1400)
+      setTimeout(() => window.electronAPI?.minimizeAfterCopy?.(), 800)
     } catch (e: any) {
       setError(`Erro ao copiar: ${e.message}`)
-      setTimeout(() => setError(null), 2000)
+      setTimeout(() => setError(null), 2200)
     }
   }
 
-  async function copyImageToClipboard(imageUrl: string) {
+  async function copyImageViaFetch(imageUrl: string) {
     const response = await fetch(imageUrl)
-    if (!response.ok) {
-      throw new Error(`Falha ao baixar imagem (${response.status})`)
-    }
+    if (!response.ok) throw new Error(`Falha ao baixar imagem (${response.status})`)
     const blob = await response.blob()
-    await navigator.clipboard.write([
-      new ClipboardItem({ [blob.type]: blob })
-    ])
-  }
-
-  const styles = {
-    container: {
-      display: 'flex',
-      flexDirection: 'column' as const,
-      height: '100vh',
-      background: 'linear-gradient(135deg, #1a1a1a 0%, #242424 100%)',
-      color: '#e0e0e0',
-    },
-    header: {
-      padding: '12px 16px',
-      borderBottom: '1px solid #333',
-      background: 'rgba(0,0,0,0.3)',
-      backdropFilter: 'blur(10px)',
-      userSelect: 'none',
-      WebkitUserSelect: 'none',
-      WebkitAppRegion: 'drag',
-      display: 'flex',
-      flexDirection: 'column' as const,
-      gap: '6px',
-    },
-    title: {
-      fontSize: '18px',
-      fontWeight: 'bold',
-      margin: '0 0 4px 0',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-    },
-    subtitle: {
-      fontSize: '11px',
-      color: '#888',
-      margin: 0,
-    },
-    errorBox: {
-      margin: '8px 0',
-      padding: '8px 12px',
-      background: 'rgba(220, 53, 69, 0.2)',
-      border: '1px solid rgba(220, 53, 69, 0.4)',
-      borderRadius: '6px',
-      fontSize: '12px',
-      color: '#ff6b6b',
-      animation: 'slideIn 0.3s ease-out',
-    },
-    controls: {
-      display: 'flex',
-      gap: '8px',
-      alignItems: 'center',
-      padding: '8px 0',
-      WebkitAppRegion: 'no-drag' as const,
-    },
-    button: {
-      padding: '6px 12px',
-      fontSize: '12px',
-      border: 'none',
-      borderRadius: '6px',
-      cursor: 'pointer',
-      background: 'linear-gradient(135deg, #0066cc 0%, #0052a3 100%)',
-      color: '#fff',
-      fontWeight: '500',
-      transition: 'all 0.2s ease',
-      opacity: 1,
-      transform: 'scale(1)',
-    },
-    buttonDisabled: {
-      opacity: 0.5,
-      cursor: 'not-allowed',
-    },
-    counter: {
-      fontSize: '11px',
-      color: '#888',
-      marginLeft: '8px',
-    },
-    headerTop: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: '12px',
-      marginBottom: '6px',
-    },
-    windowControls: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '6px',
-      WebkitAppRegion: 'no-drag' as const,
-    },
-    windowButton: {
-      width: '18px',
-      height: '18px',
-      borderRadius: '50%',
-      border: '1px solid rgba(255,255,255,0.2)',
-      cursor: 'pointer',
-      transition: 'opacity 0.2s ease',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: '10px',
-      lineHeight: 1,
-      color: '#0d0d0d',
-    },
-    searchBox: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      width: '100%',
-      WebkitAppRegion: 'no-drag' as const,
-    },
-    searchInput: {
-      flex: 1,
-      padding: '6px 10px',
-      borderRadius: '6px',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
-      background: 'rgba(0, 0, 0, 0.35)',
-      color: '#f5f5f5',
-      fontSize: '12px',
-      outline: 'none',
-    },
-    listContainer: {
-      flex: 1,
-      overflowY: 'auto' as const,
-      padding: '8px',
-      display: 'flex',
-      flexDirection: 'column' as const,
-      gap: '6px',
-    },
-    emptyState: {
-      display: 'flex',
-      flexDirection: 'column' as const,
-      alignItems: 'center',
-      justifyContent: 'center',
-      height: '100%',
-      color: '#666',
-      fontSize: '12px',
-      animation: 'fadeIn 0.3s ease',
-    },
-    clipItem: {
-      padding: '12px',
-      background: 'rgba(255, 255, 255, 0.05)',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
-      borderRadius: '8px',
-      cursor: 'pointer',
-      transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
-      display: 'flex',
-      gap: '8px',
-      alignItems: 'flex-start',
-    },
-    clipItemSelected: {
-      background: 'linear-gradient(135deg, rgba(0, 102, 204, 0.3) 0%, rgba(0, 82, 163, 0.3) 100%)',
-      border: '1.5px solid #0066cc',
-      boxShadow: '0 0 12px rgba(0, 102, 204, 0.2)',
-      transform: 'translateX(4px)',
-    },
-    clipContent: {
-      flex: 1,
-      minWidth: 0,
-    },
-    timestamp: {
-      fontSize: '10px',
-      color: '#888',
-      marginBottom: '4px',
-    },
-    preview: {
-      fontSize: '12px',
-      lineHeight: '1.4',
-      color: '#d0d0d0',
-      wordBreak: 'break-word' as const,
-      whiteSpace: 'pre-wrap' as const,
-      maxHeight: '100px',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
-    },
-    previewImage: {
-      maxWidth: '100%',
-      maxHeight: '100px',
-      borderRadius: '4px',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
-    },
-    copyButton: {
-      padding: '6px 10px',
-      fontSize: '12px',
-      border: 'none',
-      borderRadius: '6px',
-      cursor: 'pointer',
-      background: 'rgba(0, 102, 204, 0.2)',
-      color: '#0099ff',
-      fontWeight: '500',
-      whiteSpace: 'nowrap' as const,
-      marginTop: '4px',
-      transition: 'all 0.2s ease',
-      minWidth: '40px',
-    },
-    copyButtonCopied: {
-      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-      color: '#fff',
-    },
+    await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })])
   }
 
   return (
-    <div style={styles.container as React.CSSProperties}>
-      <style>{`
-        @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-        
-        @keyframes pulse {
-          0%, 100% {
-            opacity: 1;
-          }
-          50% {
-            opacity: 0.7;
-          }
-        }
-        
-        .copy-btn:hover {
-          transform: scale(1.05);
-          opacity: 0.9;
-        }
-        
-        .copy-btn:active {
-          transform: scale(0.95);
-        }
-      `}</style>
-
-      <div style={styles.header as React.CSSProperties} className="window-header">
-        <div style={styles.headerTop as React.CSSProperties}>
-          <div style={styles.title as React.CSSProperties}>
-            📋 UClip
+    <div className="uc-app">
+      {/* ---------------- header ---------------- */}
+      <header className="uc-header">
+        <div className="uc-header-row">
+          <div className="uc-brand">
+            <div className="uc-brand-mark"><Icon.Brand /></div>
+            <span className="uc-brand-name">UClip</span>
           </div>
-          <div style={styles.windowControls as React.CSSProperties}>
+          <div className="uc-window-controls">
             <button
-              onClick={(e) => {
-                e.stopPropagation()
-                window.electronAPI?.minimizeWindow?.()
-              }}
-              style={{
-                ...styles.windowButton,
-                background: '#f6c147',
-              } as React.CSSProperties}
+              type="button"
+              className="uc-window-btn"
+              onClick={() => window.electronAPI?.minimizeWindow?.()}
               title="Minimizar"
+              aria-label="Minimizar"
             >
-              –
+              <Icon.Minimize />
             </button>
             <button
-              onClick={(e) => {
-                e.stopPropagation()
-                window.electronAPI?.closeWindow?.()
-              }}
-              style={{
-                ...styles.windowButton,
-                background: '#eb5a5a',
-              } as React.CSSProperties}
+              type="button"
+              className="uc-window-btn uc-window-btn--close"
+              onClick={() => window.electronAPI?.closeWindow?.()}
               title="Fechar"
+              aria-label="Fechar"
             >
-              ✕
+              <Icon.Close />
             </button>
           </div>
         </div>
-        <p style={styles.subtitle as React.CSSProperties}>
-          ⬆️ ⬇️ Navegar • Enter Copiar
-        </p>
 
-        {error && (
-          <div style={styles.errorBox as React.CSSProperties}>
-            ⚠️ {error}
-          </div>
-        )}
-
-        <div style={styles.searchBox as React.CSSProperties}>
+        <div className="uc-search">
+          <span className="uc-search-icon"><Icon.Search /></span>
           <input
+            ref={searchInputRef}
             type="text"
-            placeholder="Pesquisar clips..."
+            className="uc-search-input"
+            placeholder="Buscar no histórico…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={styles.searchInput as React.CSSProperties}
+            autoFocus
           />
+          {!searchTerm && (
+            <div className="uc-search-kbd">
+              <span className="uc-kbd">↑</span>
+              <span className="uc-kbd">↓</span>
+            </div>
+          )}
         </div>
 
-        <div style={styles.controls as React.CSSProperties}>
+        {error && (
+          <div className="uc-error">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" />
+            </svg>
+            {error}
+          </div>
+        )}
+
+        <div className="uc-meta">
+          <div className="uc-counter">
+            <span className="uc-counter-dot" />
+            {filteredClips.length === clips.length
+              ? `${clips.length} ${clips.length === 1 ? 'clip' : 'clips'}`
+              : `${filteredClips.length} / ${clips.length}`}
+          </div>
           <button
+            type="button"
+            className={`uc-icon-btn ${loading ? 'uc-icon-btn--loading' : ''}`}
             onClick={load}
             disabled={loading}
-            style={{
-              ...styles.button,
-              ...(loading ? styles.buttonDisabled : {}),
-            } as React.CSSProperties}
-            className="copy-btn"
+            title="Atualizar"
+            aria-label="Atualizar"
           >
-            {loading ? '⏳' : '🔄'}
+            <Icon.Refresh />
           </button>
-          <span style={styles.counter as React.CSSProperties}>
-            {filteredClips.length} de {clips.length} {clips.length === 1 ? 'clip' : 'clips'}
-          </span>
         </div>
-      </div>
+      </header>
 
-      <div style={styles.listContainer as React.CSSProperties}>
+      {/* ---------------- list ---------------- */}
+      <div className="uc-list">
         {filteredClips.length === 0 && !loading && (
-          <div style={styles.emptyState as React.CSSProperties}>
-            <div style={{fontSize: '32px', marginBottom: '8px'}}>📭</div>
-            <div>{searchTerm.trim() ? 'Nenhum resultado' : 'Nenhum clip'}</div>
-            <div style={{fontSize: '10px', color: '#555', marginTop: '4px'}}>
-              {searchTerm.trim() ? 'Tente outro termo ou limpe a busca' : 'Copie algo para aparecer aqui'}
+          <div className="uc-empty">
+            <div className="uc-empty-illus"><Icon.Inbox /></div>
+            <div className="uc-empty-title">
+              {searchTerm.trim() ? 'Nenhum resultado' : 'Histórico vazio'}
+            </div>
+            <div className="uc-empty-hint">
+              {searchTerm.trim() ? 'Tente outro termo de busca' : 'Copie algo (Ctrl+C) para começar'}
             </div>
           </div>
         )}
 
-        {filteredClips.map((clip, idx) => (
-          <div
-            key={clip.id}
-            ref={selectedIndex === idx ? selectedRef : null}
-            onClick={() => setSelectedIndex(idx)}
-            className={`clip-item ${selectedIndex === idx ? 'selected' : ''}`}
-            style={{
-              ...styles.clipItem,
-              ...(selectedIndex === idx ? styles.clipItemSelected : {}),
-            } as React.CSSProperties}
-          >
-            <div style={styles.clipContent as React.CSSProperties}>
-              <div style={styles.timestamp as React.CSSProperties}>
-                {new Date(clip.created_at).toLocaleString('pt-BR', {
-                  month: '2-digit',
-                  day: '2-digit',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </div>
-              
-              {clip.mime && clip.mime.startsWith('image') ? (
-                <img
-                  src={clip.content}
-                  alt={`clip-${clip.id}`}
-                  style={styles.previewImage as React.CSSProperties}
-                />
-              ) : (
-                <div style={styles.preview as React.CSSProperties}>
-                  {clip.content}
-                </div>
-              )}
-            </div>
-            
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                copyToClipboard(clip)
-              }}
-              style={{
-                ...styles.copyButton,
-                ...(copied === clip.id ? styles.copyButtonCopied : {}),
-              } as React.CSSProperties}
-              className="copy-btn"
+        {filteredClips.map((clip, idx) => {
+          const isImage = !!clip.mime && clip.mime.startsWith('image')
+          const isSelected = selectedIndex === idx
+          const isCopied = copied === clip.id
+          const hasImageError = imageErrors.has(clip.id)
+          return (
+            <div
+              key={clip.id}
+              ref={isSelected ? selectedRef : null}
+              onClick={() => setSelectedIndex(idx)}
+              onDoubleClick={() => copyToClipboard(clip)}
+              className={`uc-clip ${isSelected ? 'uc-clip--selected' : ''}`}
             >
-              {copied === clip.id ? '✓' : '📋'}
-            </button>
-          </div>
-        ))}
+              <div className="uc-clip-icon">
+                {isImage ? <Icon.ImageIcon /> : <Icon.TextIcon />}
+              </div>
+              <div className="uc-clip-body">
+                <div className="uc-clip-meta-line">
+                  <span className="uc-clip-type-tag">{isImage ? 'IMG' : 'TXT'}</span>
+                  <span>{relativeTime(clip.created_at)}</span>
+                </div>
+                {isImage ? (
+                  hasImageError ? (
+                    <div className="uc-clip-image-wrap">
+                      <div className="uc-clip-image-fallback">imagem indisponível</div>
+                    </div>
+                  ) : (
+                    <div className="uc-clip-image-wrap">
+                      <img
+                        src={clip.content}
+                        alt={`clip-${clip.id}`}
+                        className="uc-clip-image"
+                        loading="lazy"
+                        onError={() => {
+                          setImageErrors((prev) => {
+                            const next = new Set(prev)
+                            next.add(clip.id)
+                            return next
+                          })
+                        }}
+                      />
+                    </div>
+                  )
+                ) : (
+                  <div className="uc-clip-preview">{clip.content}</div>
+                )}
+              </div>
+              <div className="uc-clip-actions">
+                <button
+                  type="button"
+                  className={`uc-copy-btn ${isCopied ? 'uc-copy-btn--copied' : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    copyToClipboard(clip)
+                  }}
+                  title="Copiar"
+                  aria-label="Copiar"
+                >
+                  {isCopied ? <Icon.Check /> : <Icon.Copy />}
+                </button>
+              </div>
+            </div>
+          )
+        })}
       </div>
+
+      {/* ---------------- footer ---------------- */}
+      <footer className="uc-footer">
+        <div className="uc-footer-hints">
+          <span className="uc-hint"><span className="uc-kbd">↵</span> copiar</span>
+          <span className="uc-hint"><span className="uc-kbd">↑↓</span> navegar</span>
+          <span className="uc-hint"><span className="uc-kbd">esc</span> fechar</span>
+        </div>
+        <span>v0.2.0</span>
+      </footer>
     </div>
   )
 }
