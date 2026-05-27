@@ -29,3 +29,6 @@ images/
 
 # Build/test caches
 *.tsbuildinfo
+
+# Claude Code handoff/working dir (never committed)
+.claude/
