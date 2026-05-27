@@ -147,7 +147,7 @@ fi
 SCHEMA="org.gnome.settings-daemon.plugins.media-keys"
 PATH_BASE="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings"
 NEW_PATH="$PATH_BASE/uclip/"
-SCHEMA_CB="${SCHEMA}.custom-keybinding:$NEW_PATH"
+SCHEMA_CB="$SCHEMA.custom-keybinding:$NEW_PATH"
 
 CURRENT=$(gsettings get "$SCHEMA" custom-keybindings 2>/dev/null || echo "@as []")
 
