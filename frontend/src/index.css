@@ -366,6 +366,9 @@ html, body, #root {
 .uc-clip {
   display: flex;
   align-items: stretch;
+  /* Sem isto o flex column da .uc-list encolhe os cards (min-height:auto vira 0
+     por causa do overflow:hidden), colapsando cada linha e cortando o conteúdo. */
+  flex: 0 0 auto;
   gap: 10px;
   padding: 10px 12px;
   border: 1px solid var(--border-subtle);

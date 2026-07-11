@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { listClips, Clip } from './api'
 
+declare const __APP_VERSION__: string
+
 declare global {
   interface Window {
     electronAPI?: {
@@ -393,7 +395,7 @@ export default function App() {
           <span className="uc-hint"><span className="uc-kbd">↑↓</span> navegar</span>
           <span className="uc-hint"><span className="uc-kbd">esc</span> fechar</span>
         </div>
-        <span>v0.2.0</span>
+        <span>v{__APP_VERSION__}</span>
       </footer>
     </div>
   )
