@@ -9,9 +9,11 @@ set -e
 INSTALL_DIR="/opt/UClip"
 VENV_DIR="$INSTALL_DIR/.venv"
 
-# Locate backend (varies depending on packaging)
+# Locate backend (varies depending on packaging).
+# Com asar: true + asarUnpack, o backend fica em resources/app.asar.unpacked/app.
 BACKEND_DIR=""
 for candidate in \
+    "$INSTALL_DIR/resources/app.asar.unpacked/app/backend" \
     "$INSTALL_DIR/resources/app/app/backend" \
     "$INSTALL_DIR/app/backend" \
     "$INSTALL_DIR/backend"; do
@@ -20,6 +22,13 @@ for candidate in \
         break
     fi
 done
+
+# Falha explícita se não achamos o backend: sem isto, dirname "" vira "." e os
+# wrappers saem com `cd "."`, quebrando os serviços com ModuleNotFoundError.
+if [ -z "$BACKEND_DIR" ]; then
+    echo "[UClip] ❌ Erro: diretório backend não encontrado sob $INSTALL_DIR"
+    exit 1
+fi
 
 echo "[UClip] Diretório de instalação: $INSTALL_DIR"
 echo "[UClip] Backend localizado em:   $BACKEND_DIR"
