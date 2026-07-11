@@ -15,8 +15,10 @@ build/
 *.db-shm
 *.db-wal
 
-# Images directory (development data)
+# Images directory (development data) — exceto imagens de documentação
 images/
+!docs/images/
+!docs/images/**
 
 # OS
 .DS_Store
