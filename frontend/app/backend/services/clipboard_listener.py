@@ -30,6 +30,12 @@ from backend.services.database_service import init_db, Clip, ensure_images_dir
 logger = logging.getLogger("uclip.clipboard_listener")
 logger.addHandler(logging.NullHandler())
 
+# Assinatura de um arquivo PNG. Usada para validar que o clipboard realmente
+# contém uma imagem: xclip/xsel, ao receber o target image/png para um
+# clipboard que só tem texto, devolvem o PRÓPRIO texto com returncode 0. Sem
+# essa checagem, todo texto copiado seria salvo como um .png inválido.
+_PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
+
 
 def _run(cmd: list, timeout: float = 1.5) -> Tuple[int, bytes]:
     """Executa comando e retorna (returncode, stdout). Engole exceções."""
@@ -93,17 +99,21 @@ class ClipboardListener:
         return None
 
     def _get_image(self) -> Optional[bytes]:
+        # Só consideramos imagem o que começa com a assinatura PNG. Isso impede
+        # que texto retornado por xclip/xsel (que ignoram o target solicitado)
+        # seja salvo como imagem — o que fazia todo texto copiado virar um .png
+        # inválido e nunca chegar em _get_text().
         if self._wl_paste:
             rc, out = _run([self._wl_paste, "-n", "-t", "image/png"])
-            if rc == 0 and out:
+            if rc == 0 and out.startswith(_PNG_MAGIC):
                 return out
         if self._xclip:
             rc, out = _run([self._xclip, "-selection", "clipboard", "-t", "image/png", "-o"])
-            if rc == 0 and out:
+            if rc == 0 and out.startswith(_PNG_MAGIC):
                 return out
         if self._xsel:
             rc, out = _run([self._xsel, "--clipboard", "--output", "--mime-type=image/png"])
-            if rc == 0 and out:
+            if rc == 0 and out.startswith(_PNG_MAGIC):
                 return out
         return None
 
