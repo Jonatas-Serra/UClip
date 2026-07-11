@@ -1,287 +1,180 @@
-<!-- Language Toggle: [Português](#português-br) | [English](#english) -->
+<div align="center">
 
-# UClip — Gerenciador de Área de Transferência para Linux
+# 📋 UClip
 
-Um gerenciador de clipboard moderno, rápido e fácil de usar para Linux. Captura automaticamente histórico de texto e imagens com um atalho global (Super+V).
+**Gerenciador de área de transferência moderno para Linux.**
+Guarda tudo o que você copia — textos e imagens — e traz de volta com um atalho global (`Super + V`).
 
 [![Release](https://img.shields.io/github/v/release/Jonatas-Serra/UClip?style=flat-square)](https://github.com/Jonatas-Serra/UClip/releases)
-[![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Linux-yellow?style=flat-square)](README.md)
-[![Python](https://img.shields.io/badge/python-3.8+-blue?style=flat-square)](https://www.python.org/)
-[![Node.js](https://img.shields.io/badge/node-16+-green?style=flat-square)](https://nodejs.org/)
+[![Downloads](https://img.shields.io/github/downloads/Jonatas-Serra/UClip/total?style=flat-square)](https://github.com/Jonatas-Serra/UClip/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Ubuntu%20%7C%20Debian%20%7C%20Linux%20Mint-E95420?style=flat-square&logo=ubuntu&logoColor=white)](#-instala%C3%A7%C3%A3o)
+[![X11 + Wayland](https://img.shields.io/badge/X11%20%2B%20Wayland-supported-success?style=flat-square)](#-como-funciona)
+
+<img src="docs/images/screenshot-history.png" alt="Histórico do UClip mostrando textos e miniaturas de imagens copiados" width="360">
+
+</div>
 
 ---
 
-## 📥 Download & Instalação Rápida
+## ✨ O que ele faz
 
-### 🐧 Ubuntu / Debian / Linux Mint
+- 🔤 **Captura texto e imagens** automaticamente ao copiar (`Ctrl + C` / print de tela)
+- ⌨️ **Atalho global `Super + V`** para abrir o histórico de qualquer lugar
+- 🔎 **Busca instantânea** no histórico enquanto você digita
+- 🖼️ **Miniaturas de imagens** direto na lista
+- 📋 **Copiar com um clique** (ou `Enter`) — volta pra área de transferência na hora
+- 🗂️ **Histórico persistente** em banco SQLite local, só seu — nada vai pra nuvem
+- 🐧 **Funciona em X11 e Wayland** (usa `xclip`/`xsel`/`wl-clipboard`)
+- 🇧🇷 **Interface em Português e Inglês**
 
-**Opção 1: Script automático completo** (Recomendado - Instala tudo)
+<div align="center">
+<img src="docs/images/screenshot-search.png" alt="Busca do UClip filtrando o histórico pelo termo digitado" width="360">
+<br><sub>Busca filtrando o histórico em tempo real (dados de exemplo).</sub>
+</div>
+
+---
+
+## 📦 Instalação
+
+### Ubuntu / Debian / Linux Mint / Pop!_OS
+
+**Última versão em um comando:**
+
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/Jonatas-Serra/UClip/main/scripts/install.sh)
+URL=$(curl -s https://api.github.com/repos/Jonatas-Serra/UClip/releases/latest \
+  | grep browser_download_url | grep '\.deb' | cut -d '"' -f4)
+wget -O /tmp/UClip.deb "$URL" && sudo apt install -y /tmp/UClip.deb
 ```
 
-**Opção 2: Instalação manual em 2 passos** (Frontend + Backend)
+**Ou baixando uma versão específica:**
 
-**Instalação em um comando** (recomendado - tudo automático!)
 ```bash
 VERSION=0.2.3
 wget https://github.com/Jonatas-Serra/UClip/releases/download/v${VERSION}/UClip-${VERSION}.deb
 sudo apt install -y ./UClip-${VERSION}.deb
 ```
 
-✅ **É isso! Tudo configurado automaticamente:**
-- ✔️ Backend (Python) instalado em `/opt/UClip`
-- ✔️ Dependências Python instaladas
-- ✔️ Banco de dados criado com permissões corretas
-- ✔️ Serviços systemd criados e iniciados automaticamente
-- ✔️ Listener configurado para autostart na sua sessão
+Também disponível como **AppImage** (portável) na [página de releases](https://github.com/Jonatas-Serra/UClip/releases).
 
-**Próximo passo: Apenas execute:**
-```bash
-uclip
-```
+O `.deb` configura tudo automaticamente:
 
-> 💡 **Pop!_OS 22.04+**: os comandos acima funcionam normalmente. Certifique-se de ter o pacote `libfuse2` instalado antes de rodar AppImage.
+- ✔️ App instalado em `/opt/UClip`
+- ✔️ Dependências Python num virtualenv isolado
+- ✔️ Serviços de usuário (systemd): `uclip-backend` (API) + `uclip-listener` (captura)
+- ✔️ Atalho `Super + V` registrado via `gsettings` (GNOME)
+- ✔️ Dados guardados em `~/.local/share/uclip`
 
-**Opção 2: AppImage** (versão portável, requer backend em separado)
-```bash
-VERSION=0.2.3
-wget -O ~/UClip.AppImage https://github.com/Jonatas-Serra/UClip/releases/download/v${VERSION}/UClip-${VERSION}.AppImage
-sudo apt install -y libfuse2  # necessário para rodar AppImage em Ubuntu/Pop!_OS recentes
-chmod +x ~/UClip.AppImage
-
-# Para usar AppImage com backend, siga as instruções de desenvolvimento abaixo
-~/UClip.AppImage
-```
-
-### 🎯 Verificar Instalação
-
-```bash
-# ✓ Verificar se o frontend está instalado
-which uclip
-
-# ✓ Verificar se o backend está rodando (systemd services)
-systemctl status uclip-backend.service
-systemctl status uclip-listener.service
-
-# ✓ Ver logs em tempo real
-sudo journalctl -u uclip-backend.service -f
-sudo journalctl -u uclip-listener.service -f
-
-# ✓ Testar se o backend está respondendo
-curl http://127.0.0.1:8001/health
-```
+Depois de instalar, pressione **`Super + V`** — ou rode `uclip` — e comece a copiar. 🎉
 
 ---
 
-## 🔧 Modo Desenvolvimento
+## 🚀 Como usar
 
-Para desenvolver ou contribuir no UClip:
+| Ação | Atalho |
+|------|--------|
+| Abrir / fechar o histórico | `Super + V` |
+| Navegar pelos clips | `↑` / `↓` |
+| Copiar o clip selecionado | `Enter` |
+| Buscar | é só começar a digitar |
+| Fechar | `Esc` |
+
+Copie qualquer coisa (texto ou imagem) normalmente — o UClip guarda no histórico. Quando precisar de algo que copiou antes, `Super + V`, acha e `Enter`.
+
+---
+
+## 🩺 Verificar / solucionar problemas
 
 ```bash
-# Clonar repositório
-git clone https://github.com/Jonatas-Serra/UClip.git
-cd UClip
+# serviços rodando? (são serviços de USUÁRIO, note o --user)
+systemctl --user status uclip-backend.service uclip-listener.service
 
-# 1. Backend (Python + FastAPI)
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r backend/requirements.txt
+# a API responde?
+curl http://127.0.0.1:8001/health        # -> {"status":"healthy"}
 
-# Iniciar backend em terminal separado
-python3 backend/cli/run_api.py          # API em localhost:8001
-# ou em outro terminal:
-python3 backend/cli/run_listener.py     # Listener de clipboard
-
-# 2. Frontend (React + Vite)
-cd frontend
-npm install
-npm run dev                              # Vite dev server em localhost:5173
-
-# 3. Em outro terminal, lance Electron
-npm run electron:dev
+# logs em tempo real
+journalctl --user -u uclip-listener.service -f
 ```
-
-**Pronto!** A aplicação rodará em modo desenvolvimento com hot reload.
-
----
-
-## 🌍 Documentação
-
-| PT-BR | English |
-|--------|---------|
-| [Guia Completo de Instalação](docs/INSTALL.pt.md) | [Complete Installation Guide](docs/INSTALL.md) |
-| [Changelog](docs/CHANGELOG.md) | [Building Guide](docs/BUILD.md) |
-| [Teste Rápido](docs/TESTE_RAPIDO.md) | [Quick Test](docs/QUICK_TEST.md) |
-
----
-
-## ✨ Características
-
-✅ **Captura Automática** — Texto e imagens capturados ao copiar  
-✅ **Histórico Persistente** — Banco de dados SQLite local  
-✅ **Atalho Global** — Super+V em X11 e Wayland  
-✅ **Interface Limpa** — Baseada em React + Tailwind CSS  
-✅ **Multilíngue** — Suporte a Português e Inglês  
-✅ **Pesquisa Rápida** — Encontre clips antigos instantaneamente  
-✅ **Cópia com Um Clique** — Recupere qualquer clip do histórico  
-✅ **Sem Dependências Externas** — Funciona out-of-the-box
-
----
-
-## 🏗️ Arquitetura
-
-UClip é dividido em dois componentes principais:
-
-```
-┌─────────────────────────────────────────┐
-│   Frontend (React + Electron)           │
-│   • Interface gráfica bonita            │
-│   • Atalho Super+V para abrir/ocultar   │
-│   • Pesquisa de clips                   │
-│   └─ Comunica com Backend via HTTP      │
-└─────────────────────────────────────────┘
-            ⬇️ API REST (localhost:8000)
-┌─────────────────────────────────────────┐
-│   Backend (Python + FastAPI)            │
-│   • Escuta clipboard (X11/Wayland)      │
-│   • Armazena em SQLite                  │
-│   • Expõe dados via API REST            │
-│   └─ Listener captura novos clips       │
-└─────────────────────────────────────────┘
-            ⬇️
-┌─────────────────────────────────────────┐
-│   Banco de Dados (SQLite)               │
-│   • Histórico de texto e imagens        │
-└─────────────────────────────────────────┘
-```
-
-**Backend Tech:**
-- FastAPI, SQLAlchemy, pyperclip, Pillow
-
-**Frontend Tech:**
-- React, TypeScript, Tailwind CSS, Electron, Vite
-
----
-
-## � Requisitos do Sistema
-
-| Item | Versão | Notas |
-|------|--------|-------|
-| **OS** | Ubuntu 20.04+ | Debian, Linux Mint, Fedora |
-| **Python** | 3.8+ | Para backend |
-| **Node.js** | 16+ | Para desenvolvimento apenas |
-| **Compilador** | gcc/clang | Automático em `apt-get install` |
-
----
-
-## 🚀 Desenvolvimento
-
-Para contribuir ou compilar localmente:
-
-```bash
-# Clone
-git clone https://github.com/Jonatas-Serra/UClip.git
-cd UClip
-
-# Backend (Python)
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r backend/requirements.txt
-python3 backend/app.py  # API em http://localhost:8000
-
-# Frontend (em outro terminal)
-cd frontend
-npm install
-npm run dev  # Dev server em http://localhost:5173
-# ou compilar:
-npm run build && npm run prepack && npx electron-builder --linux
-```
-
-### 🧹 Limpeza de Dados de Desenvolvimento
-
-**Importante**: Antes de criar um build ou release, sempre limpe os dados de desenvolvimento:
-
-```bash
-# Usando Makefile
-make clean-dev-data
-
-# Ou diretamente o script
-./scripts/clean_dev_data.sh
-```
-
-Isso remove:
-- `uclip.db*` — Banco de dados SQLite com dados de teste
-- `images/` — Imagens copiadas durante desenvolvimento
-- `__pycache__/` e `*.pyc` — Cache Python
-
-> 💡 **Os scripts de build (`build_deb.sh` e `create_release.sh`) já fazem essa limpeza automaticamente!**
-
-Veja [docs/BUILD.md](docs/BUILD.md) para guia completo de desenvolvimento.
-
----
-
-## 🐛 Troubleshooting
 
 | Problema | Solução |
 |----------|---------|
-| "AppImage não abre" | `sudo apt-get install libfuse2` |
-| "Atalho não funciona em Wayland" | Execute instalador novamente ou [veja guia](docs/INSTALL.md) |
-| "Permissão negada" no AppImage | `chmod +x ~/UClip.AppImage` |
-| "Banco de dados locked" | Feche outra instância do UClip |
-| "Clipboard vazio" | Certifique-se que backend está rodando |
+| Nada é capturado | Confirme que os serviços estão `active` (comando acima) |
+| `Super + V` não abre | Em GNOME/Wayland, faça logout/login após instalar |
+| AppImage não abre | `sudo apt install -y libfuse2` |
+| "database locked" | Feche outra instância do UClip |
 
-Para mais detalhes → [docs/INSTALL.md](docs/INSTALL.md) | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
+> A qualquer momento você pode desinstalar com o script [`uninstall-uclip.sh`](uninstall-uclip.sh) do repositório.
+
+---
+
+## 🧩 Como funciona
+
+UClip tem duas partes que rodam na sua sessão como serviços de usuário:
+
+```
+   você copia (Ctrl+C / print)
+            │
+            ▼
+┌───────────────────────────┐        ┌───────────────────────────┐
+│  Listener (Python)        │  grava │  SQLite ~/.local/share/    │
+│  xclip / xsel / wl-paste  ├───────▶│  uclip/uclip.db + images/  │
+└───────────────────────────┘        └─────────────┬─────────────┘
+                                                    │ lê
+┌───────────────────────────┐   HTTP :8001   ┌──────▼─────────────┐
+│  UI (Electron + React)    │◀──────────────▶│  API (FastAPI)     │
+│  atalho Super+V, busca    │                │  /api/clips        │
+└───────────────────────────┘                └────────────────────┘
+```
+
+- **Backend:** Python, FastAPI, SQLAlchemy, Pillow, pyperclip
+- **Frontend:** Electron + React + TypeScript (Vite), CSS próprio (sem framework de UI)
+- **Privacidade:** tudo fica local, em `~/.local/share/uclip`. A API escuta só em `127.0.0.1`.
+
+---
+
+## 🛠️ Desenvolvimento
+
+```bash
+git clone https://github.com/Jonatas-Serra/UClip.git
+cd UClip
+
+# Backend (Python + FastAPI)
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r backend/requirements.txt
+python3 backend/cli/run_api.py        # API em http://127.0.0.1:8001
+python3 backend/cli/run_listener.py   # listener de clipboard (outro terminal)
+
+# Frontend (React + Vite)
+cd frontend
+npm install
+npm run dev                           # dev server em http://localhost:5173
+npm run dev:electron                  # abre a janela Electron (outro terminal)
+```
+
+Com o dev server no ar, dá pra acompanhar a UI direto no navegador em `localhost:5173` (com hot reload). Para empacotar:
+
+```bash
+cd frontend
+npm run build && npm run prepack && npx electron-builder --linux deb AppImage
+```
+
+Veja o [guia de build](docs/BUILD.md) para detalhes.
+
+---
+
+## 🤝 Contribuindo
+
+Issues e pull requests são bem-vindos! Ideias: mais idiomas, temas, sincronização opcional, melhorias de performance.
+
+- 🐛 Bugs: [abra uma issue](https://github.com/Jonatas-Serra/UClip/issues/new)
+- 💬 Dúvidas: [Discussions](https://github.com/Jonatas-Serra/UClip/discussions)
 
 ---
 
 ## 📄 Licença
 
-[MIT License](LICENSE) — Livre para usar, modificar e distribuir.
+[MIT](LICENSE) — livre para usar, modificar e distribuir.
 
----
-
-## 🤝 Contribuições
-
-Quer contribuir? Abra uma [issue](https://github.com/Jonatas-Serra/UClip/issues) ou [pull request](https://github.com/Jonatas-Serra/UClip/pulls)!
-
-**Ideias para contribuições:**
-- Suporte a mais idiomas
-- Temas customizáveis
-- Integração com outras aplicações
-- Melhorias de performance
-- Documentação
-
----
-
-## 📞 Suporte
-
-- 🐛 Encontrou um bug? [Abra uma issue](https://github.com/Jonatas-Serra/UClip/issues/new)
-- 💬 Dúvidas? [Discussões](https://github.com/Jonatas-Serra/UClip/discussions)
-- 📧 Email: [jonatasserra@outlook.com](mailto:jonatasserra@outlook.com)
-
----
-
-## 🌟 Reconhecimentos
-
-- Inspirado em Clipboard Managers (GNOME Clipboard, KDE Klipper)
-- Comunidade Linux por ferramentas incríveis
-
-**⭐ Se gostar, deixe uma estrela!**
-
----
-
-## 📊 Status do Projeto
-
-| Componente | Status | Nota |
-|------------|--------|------|
-| Backend API | ✅ Estável | Em produção |
-| Frontend UI | ✅ Estável | Interface completada |
-| Instalador | ✅ Automático | AppImage + .deb |
-| Documentação | 🔄 Melhorando | Adicionando mais exemplos |
-| i18n | 🚀 Em progresso | PT-BR e EN, expandindo |
-
----
-
-*Última atualização: Outubro 2025*  
-*Version: 0.2.0*
+<div align="center">
+<sub>Feito para a comunidade Linux 🐧 — se te ajudou, deixe uma ⭐</sub>
+</div>
