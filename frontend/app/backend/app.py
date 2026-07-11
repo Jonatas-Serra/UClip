@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from backend.api.clip import router as clip_router
 from backend.services.database_service import init_db, ensure_images_dir
 
-app = FastAPI(title="UClip Backend", version="0.2.2")
+app = FastAPI(title="UClip Backend", version="0.2.3")
 
 app.add_middleware(
     CORSMiddleware,

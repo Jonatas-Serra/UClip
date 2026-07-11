@@ -5,7 +5,7 @@
 
 set -e
 
-APP_VERSION="0.2.2"
+APP_VERSION="0.2.3"
 
 # Colors for output
 RED='\033[0;31m'

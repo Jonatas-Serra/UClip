@@ -1,6 +1,6 @@
 {
   "name": "uclip-frontend",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "private": true,
   "main": "electron/main.js",
   "description": "UClip - clipboard manager moderno para Linux (frontend)",
